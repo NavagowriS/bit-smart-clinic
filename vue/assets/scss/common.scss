@@ -1,0 +1,50 @@
+/* custom universal scss */
+
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;700&display=swap");
+
+
+$font-family-sans-serif : "Sora", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
+$font-family-monospace  : Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !default;
+$font-size-base         : 0.85rem !default;
+
+@import "~bootstrap/scss/bootstrap";
+
+
+html, body {
+  height : 100%;
+}
+
+body {
+  background-color : #202124;
+}
+
+.card-title {
+  font-size     : 1.4em;
+  font-weight   : bold;
+  border-bottom : solid 2px #ccc;
+  margin-bottom : 1em;
+}
+
+
+.icon-26 {
+  width : 16px;
+}
+
+
+.icon-24 {
+  width : 24px;
+}
+
+
+.icon-48 {
+  width : 48px;
+}
+
+.icon-64 {
+  width : 64px;
+}
+
+
+.column_date {
+  width : 110px;
+}
