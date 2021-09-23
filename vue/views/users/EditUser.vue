@@ -132,29 +132,29 @@
 </template>
 
 <script>
-import TopNavigationBar from "../../components/TopNavigationBar";
-
-import {AlertDialog,} from "../../assets/libs/DialogBox";
+import {AlertDialog} from '@/assets/libs/DialogBox.js';
+import TopNavigationBar from '@/components/TopNavigationBar.vue';
+import {showErrorDialog} from '@/helpers/common.js';
 
 export default {
-  name: "EditUser",
-  components: {TopNavigationBar},
+  name: 'EditUser',
+  components: { TopNavigationBar },
 
   data() {
     return {
 
       userToEdit: {
         id: undefined,
-        username: "",
-        full_name: "",
-        email: "",
-        role: ""
+        username: '',
+        full_name: '',
+        email: '',
+        role: '',
       },
 
       passwordToChange: {
-        currentPassword: "",
-        newPassword: "",
-        confirmNewPassword: "",
+        currentPassword: '',
+        newPassword: '',
+        confirmNewPassword: '',
       },
 
       isChangingPassword: false,
@@ -166,12 +166,20 @@ export default {
 
   computed: {
 
-    roles: function () { return this.$store.getters.getUserRoles; },
-    loggedInUser: function () { return this.$store.getters.getLoggedInUser; },
-    isSameAsLoggedInUser: function () { return this.userToEdit.username === this.loggedInUser.username; },
+    roles: function () {
+      return this.$store.getters['users/getUserRoles'];
+    },
+
+    loggedInUser: function () {
+      return this.$store.getters['auth/getLoggedInUser'];
+    },
+
+    isSameAsLoggedInUser: function () {
+      return this.userToEdit.username === this.loggedInUser.username;
+    },
 
     isNewPasswordValid: function () {
-      if (this.passwordToChange.newPassword === "") return false;
+      if ( this.passwordToChange.newPassword === '' ) return false;
       return this.passwordToChange.newPassword === this.passwordToChange.confirmNewPassword;
     },
 
@@ -180,15 +188,14 @@ export default {
   async mounted() {
 
     try {
-      const id = this.$route.params.id
-      await this.$store.dispatch("users_fetchUser", id);
+      const id = this.$route.params.id;
+      await this.$store.dispatch( 'users/fetchUser', id );
 
-      this.userToEdit = this.$store.getters.getUser;
+      this.userToEdit = this.$store.getters[ 'users/getUser' ];
 
 
-    } catch (error) {
-      console.log(error.response.data.payload.error);
-      // await this.$router.push("/users");
+    } catch ( e ) {
+      showErrorDialog( e.response, 'Failed to get user details' );
     }
 
   },
@@ -200,12 +207,12 @@ export default {
 
       try {
 
-        await this.$store.dispatch("users_updateUser", this.userToEdit);
+        await this.$store.dispatch( 'users/updateUser', this.userToEdit );
 
-        new AlertDialog({message: "User details updated", title: "Updated"});
+        new AlertDialog( { message: 'User details updated', title: 'Updated' } );
 
-      } catch (error) {
-        new AlertDialog({message: error.response.data.payload.error, title: "Error"});
+      } catch ( error ) {
+        new AlertDialog( { message: error.response.data.payload.error, title: 'Error' } );
       }
 
     },
@@ -217,17 +224,17 @@ export default {
       const params = {
         id: this.userToEdit.id,
         current_password: this.passwordToChange.currentPassword,
-        new_password: this.passwordToChange.newPassword
-      }
+        new_password: this.passwordToChange.newPassword,
+      };
 
       try {
 
-        await this.$store.dispatch("users_updatePassword", params);
+        await this.$store.dispatch( 'users/updatePassword', params );
 
-        new AlertDialog({message: "Password updated", title: "updated"});
+        new AlertDialog( { message: 'Password updated', title: 'updated' } );
 
-      } catch (error) {
-        new AlertDialog({message: error.response.data.payload.error, title: "Error"});
+      } catch ( error ) {
+        new AlertDialog( { message: error.response.data.payload.error, title: 'Error' } );
       }
 
     },
@@ -237,7 +244,7 @@ export default {
   },
 
 
-}
+};
 </script>
 
 <style scoped>
