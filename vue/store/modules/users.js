@@ -3,6 +3,8 @@ import axios from 'axios';
 
 export const usersStore = {
 
+    namespaced: true,
+
     state: {
 
         user: {},
@@ -11,7 +13,14 @@ export const usersStore = {
             'STAFF': 'Staff',
             'USER': 'User',
             'DOCTOR': 'Doctor',
+            'PHARMACIST': 'Pharmacist',
         },
+
+        /** @type {User[]} */
+        doctorUsers: [],
+
+        /** @type {User[]} */
+        users: [],
 
     },
     /* *** STATE *** */
@@ -24,6 +33,14 @@ export const usersStore = {
 
         getUserRoles: function ( state ) {
             return state.roles;
+        },
+
+        getDoctorUsers( state ) {
+            return state.doctorUsers;
+        },
+
+        getUsers( state ) {
+            return state.users;
         },
 
     },
@@ -41,52 +58,43 @@ export const usersStore = {
     actions: {
 
 
-        async users_fetchUser( context, id ) {
+        async fetchUser( context, id ) {
 
-            try {
-                const response = await axios.get( `users/get.php?id=${ id }` );
-                context.commit( 'setUser', response.data.payload.user );
-                return true;
-            } catch ( e ) {
-                throw e;
-            }
-
+            const response = await axios.get( `users/get.php?id=${ id }` );
+            context.state.user = response.data.payload.user;
         },
         /* fetch user */
 
-        async users_updateUser( context, user ) {
+        async fetchAll( context ) {
+            const response = await axios.post( 'users/all.php' );
+            context.state.users = response.data.payload;
+        },
 
-            try {
-                await axios.post( 'users/update.php', user );
-                return true;
-            } catch ( e ) {
-                throw e;
-            }
+
+        async updateUser( context, user ) {
+            await axios.post( 'users/update.php', user );
         },
         /* update user details */
 
-        async users_updatePassword( context, params ) {
+        async updatePassword( context, params ) {
 
             /* params: {id, current_password, new_password} */
-
-            try {
-                await axios.post( 'users/update-password.php', params );
-                return true;
-            } catch ( e ) {
-                throw e;
-            }
+            await axios.post( 'users/update-password.php', params );
         },
         /* update user password */
 
 
-        async users_createUser( context, user ) {
+        async createUser( context, user ) {
+            await axios.post( 'users/create.php', user );
+        },
 
-            try {
-                await axios.post( 'users/create.php', user );
-                return true;
-            } catch ( e ) {
-                throw e;
-            }
+        /**
+         * Fetch all the users whose role = DOCTOR
+         * @param context
+         */
+        async fetchAllDoctorUsers( context ) {
+            const response = await axios.post( 'users/all-doctors.php' );
+            context.state.doctorUsers = response.data.payload;
 
         },
 

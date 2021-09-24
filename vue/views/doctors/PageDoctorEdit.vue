@@ -4,47 +4,82 @@
 
     <TopNavigationBar/>
 
-    <div class="container">
+    <div class="container" v-if="loaded">
       <div class="row justify-content-center">
 
         <div class="col-6">
 
 
-          <div class="card">
-            <div class="card-header">Create a doctor</div>
-            <div class="card-body">
+          <CardSection class="mb-3">
+            <template v-slot:header>Edit Doctor</template>
 
-              <div id="form-create-doctor">
+            <div id="form-create-doctor">
+
+              <div class="mb-3">
+                <label class="form-label">Doctor name*</label>
+                <input type="text" class="form-control" v-model.trim="doctor.name">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Date of birth</label>
+                <DateField v-model="doctor.dob"/>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Email*</label>
+                <input type="email" class="form-control" v-model.trim="doctor.email">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Phone</label>
+                <input type="text" class="form-control" v-model="doctor.phone">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Speciality*</label>
+                <select class="form-select" v-model.number="doctor.speciality_id">
+                  <option value="-1" disabled>SELECT ONE</option>
+                  <option v-for="speciality in allSpecialities" :value="speciality.id" :key="speciality.id">
+                    {{ speciality.speciality }}
+                  </option>
+                </select>
+              </div>
+
+            </div>
+
+          </CardSection><!-- card: edit doctor -->
+
+
+          <CardSection class="mb-3">
+            <template v-slot:header>Associate user profile</template>
+
+            <div class="row">
+              <div class="col">
+
+                <p>
+                  Select doctor user for login purpose. Choose NO USER for remove association.
+                </p>
 
                 <div class="mb-3">
-                  <label class="form-label">Doctor name*</label>
-                  <input type="text" class="form-control" v-model.trim="doctor.name">
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Date of birth</label>
-                  <DateField v-model="doctor.dob"/>
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Email*</label>
-                  <input type="email" class="form-control" v-model.trim="doctor.email">
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Phone</label>
-                  <input type="text" class="form-control" v-model="doctor.phone">
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Speciality*</label>
-                  <select class="form-select" v-model.number="doctor.speciality_id">
-                    <option value="-1" disabled>SELECT ONE</option>
-                    <option v-for="speciality in allSpecialities" :value="speciality.id" :key="speciality.id">
-                      {{ speciality.speciality }}
-                    </option>
+                  <label class="form-label">Doctor User</label>
+                  <select class="form-select" v-model="associatedUserId">
+                    <option :value="null">CHOOSE ONE / NO USER</option>
+                    <option v-for="doc in doctorUsers" :value="doc.id" :key="doc.id">{{ doc.full_name }}</option>
                   </select>
                 </div>
+
+                <div class="alert alert-info my-3" v-if="associatedUser">
+                  <table class="table table-bordered border-info mb-0">
+                    <tbody>
+                    <tr>
+                      <td class="w-50">Username: {{ associatedUser.username }}</td>
+                      <td class="w-50">Email: {{ associatedUser.email }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+
+                </div>
+
 
                 <div class="text-end">
                   <button class="btn btn-primary" @click="onUpdate()" :disabled="!validated">Update</button>
@@ -56,9 +91,10 @@
                 </div>
 
               </div>
-
             </div>
-          </div>
+
+          </CardSection>
+
 
         </div><!-- col -->
 
@@ -72,15 +108,20 @@
 
 <script>
 
+import CardSection from '@/components/CardSection.vue';
 import DateField from '@/components/fields/DateField';
 import TopNavigationBar from '@/components/TopNavigationBar';
 
+const _ = require( 'lodash' );
+
 export default {
   name: 'PageDoctorEdit',
-  components: { DateField, TopNavigationBar },
+  components: { CardSection, DateField, TopNavigationBar },
 
   data() {
     return {
+
+      loaded: false,
 
       doctor: {
         id: undefined,
@@ -92,6 +133,8 @@ export default {
       },
 
       errors: '',
+
+      associatedUserId: null,
 
     };
   },
@@ -107,15 +150,22 @@ export default {
     },
 
     validated() {
-
-      if (
+      return !(
           this.doctor.name === '' ||
           this.doctor.email === '' ||
           this.doctor.speciality_id === -1 ||
           this.doctor.phone.length !== 10
-      ) return false;
+      );
+    },
 
-      return true;
+    associatedUser() {
+      return _.find( this.doctorUsers, { id: this.associatedUserId } );
+    },
+
+
+    /** @return {User[]} */
+    doctorUsers() {
+      return this.$store.getters[ 'users/getDoctorUsers' ];
     },
 
   },
@@ -127,7 +177,17 @@ export default {
       await this.$store.dispatch( 'doctors/getAllSpecialities' );
       await this.$store.dispatch( 'doctors/fetch', this.doctorId );
 
+      /* fetch all doctor users */
+      await this.$store.dispatch( 'users/fetchAllDoctorUsers' );
+
       this.doctor = this.$store.getters[ 'doctors/getDoctor' ];
+
+      /* set the associated user */
+      if ( this.doctor.hasOwnProperty( 'user' ) ) {
+        this.associatedUserId = this.doctor.user.id;
+      }
+
+      this.loaded = true;
 
     } catch ( e ) {
       alert( 'Failed to fetch doctor details' );
@@ -148,6 +208,7 @@ export default {
           dob: this.doctor.dob,
           phone: this.doctor.phone,
           speciality_id: this.doctor.speciality_id,
+          user_id: this.associatedUserId,
         };
 
         await this.$store.dispatch( 'doctors/update', params );

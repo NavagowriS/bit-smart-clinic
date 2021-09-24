@@ -1,4 +1,13 @@
 /**
+ * @typedef {Object} User
+ * @property {number} id
+ * @property {string} username
+ * @property {string} email
+ * @property {string} full_name
+ * @property {string} role
+ */
+
+/**
  * @typedef {Object} Patient
  *
  * @property {number} id
@@ -30,6 +39,8 @@
  * @property {string} phone
  * @property {string} dob
  * @property {DoctorSpeciality} doctor_speciality
+ * @property {number} user_id
+ * @property {User} user
  */
 
 

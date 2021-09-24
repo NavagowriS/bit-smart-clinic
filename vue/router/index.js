@@ -51,14 +51,17 @@ router.beforeEach( ( to, from, next ) => {
     const isLoggedIn = store.getters[ 'auth/getLoginStatus' ];
 
 
+    /* check if the route requires auth */
     if ( to.matched.some( record => record.meta.requiresAuth ) ) {
 
+        /* 1. check if the logged in user has the access */
         if ( to.meta.hasOwnProperty( 'hasAccess' ) ) {
             if ( !to.meta.hasAccess.includes( userType ) ) {
                 next( '/login' );
             }
         }
 
+        /* 2. user has access type and is logged in */
         if ( isLoggedIn ) {
             next();
         } else {

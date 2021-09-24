@@ -51,33 +51,33 @@
 </template>
 
 <script>
-import TopNavigationBar from "../../components/TopNavigationBar";
-import axios from "axios";
+
+import TopNavigationBar from '@/components/TopNavigationBar.vue';
 
 export default {
-  name: "ManageUsers",
-  components: {TopNavigationBar},
+  name: 'ManageUsers',
+  components: { TopNavigationBar },
 
   data() {
     return {
-      users: []
-    }
+      users: [],
+    };
   },
 
   async mounted() {
 
     try {
 
-      let response = await axios.get("users/all.php");
+      await this.$store.dispatch( 'users/fetchAll' );
 
-      this.users = response.data.payload;
+      this.users = this.$store.getters[ 'users/getUsers' ];
 
-    } catch (e) {
-      console.log(e);
+    } catch ( e ) {
+      console.log( e );
     }
 
   },
-}
+};
 </script>
 
 <style scoped>

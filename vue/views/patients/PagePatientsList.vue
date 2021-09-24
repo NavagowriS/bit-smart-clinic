@@ -9,7 +9,7 @@
 
         <div class="col">
 
-          <CardSection>
+          <CardSection class="mb-5">
             <template v-slot:header>Patients List</template>
 
             <p>Create a new
@@ -62,6 +62,7 @@
         </div><!-- col -->
 
       </div><!-- row -->
+
     </div><!-- container -->
 
 

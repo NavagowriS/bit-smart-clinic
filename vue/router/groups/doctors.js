@@ -17,7 +17,7 @@ export const doctorsRoutes = [
         component: PageDoctorCreate,
         meta: {
             requiresAuth: true,
-            hasAccess: ['ADMIN', 'STAFF'],
+            hasAccess: ['ADMIN'],
         },
     },
     {

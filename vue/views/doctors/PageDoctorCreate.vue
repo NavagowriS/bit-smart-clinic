@@ -134,11 +134,11 @@ export default {
       try {
 
         const params = {
-          name: this.doctorToSave.name,
-          email: this.doctorToSave.email,
-          dob: this.doctorToSave.dob,
-          phone: this.doctorToSave.phone,
-          speciality_id: this.doctorToSave.speciality_id,
+          name: this.formCreateDoctor.name,
+          email: this.formCreateDoctor.email,
+          dob: this.formCreateDoctor.dob,
+          phone: this.formCreateDoctor.phone,
+          speciality_id: this.formCreateDoctor.speciality_id,
         };
 
         await this.$store.dispatch( 'doctors/create', params );

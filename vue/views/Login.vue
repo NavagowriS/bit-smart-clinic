@@ -85,7 +85,15 @@ export default {
       try {
 
         await this.$store.dispatch( 'auth/auth_login', userParams );
-        await this.$router.push( '/' );
+
+        const userType = this.$store.getters[ 'auth/getUserType' ];
+
+        if ( userType === 'DOCTOR' ) {
+          await this.$router.push( { name: 'pageDoctorHome' } );
+        } else {
+          await this.$router.push( '/' );
+        }
+
 
       } catch ( e ) {
         console.log( e );

@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare( strict_types=1 );
 
 use App\Core\Http\Auth;
 use App\Core\Http\JSONResponse;
@@ -20,34 +20,34 @@ try {
 
 
     $fields = [
-        "id" => Request::getAsInteger("id", true),
-        "name" => Request::getAsString("name", true),
-        "email" => Request::getAsString("email", true),
-        "dob" => Request::getAsString("dob"),
-        "phone" => Request::getAsString("phone"),
-        "speciality_id" => Request::getAsInteger("speciality_id", true),
+        "id" => Request::getAsInteger( "id", true ),
+        "name" => Request::getAsString( "name", true ),
+        "email" => Request::getAsString( "email", true ),
+        "dob" => Request::getAsString( "dob" ),
+        "phone" => Request::getAsString( "phone" ),
+        "speciality_id" => Request::getAsInteger( "speciality_id", true ),
+        "user_id" => Request::getAsInteger( "user_id" ),
     ];
 
-
-    if ($fields["speciality_id"] < 0) throw new Exception("Invalid Speciality");
+    if ( $fields[ "speciality_id" ] < 0 ) throw new Exception( "Invalid Speciality" );
 
 
     /* check if speciality is valid */
-    $speciality = DoctorSpeciality::find($fields["speciality_id"]);
+    $speciality = DoctorSpeciality::find( $fields[ "speciality_id" ] );
 
-    if (empty($speciality)) throw new Exception("Invalid speciality");
+    if ( empty( $speciality ) ) throw new Exception( "Invalid speciality" );
 
-    $doctor = Doctor::build($fields);
+    $doctor = Doctor::build( $fields );
 
     $result = $doctor->update();
 
-    if ($result) {
+    if ( $result ) {
 
-        JSONResponse::validResponse("Updated");
+        JSONResponse::validResponse( "Updated" );
         return;
     }
 
 
-} catch (Exception $exception) {
-    JSONResponse::exceptionResponse($exception);
+} catch ( Exception $exception ) {
+    JSONResponse::exceptionResponse( $exception );
 }

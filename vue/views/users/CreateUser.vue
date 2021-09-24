@@ -116,46 +116,48 @@
 </template>
 
 <script>
-import TopNavigationBar from "../../components/TopNavigationBar";
-import axios from "axios";
+
+import TopNavigationBar from '@/components/TopNavigationBar.vue';
 
 export default {
-  name: "CreateUser",
-  components: {TopNavigationBar},
+  name: 'CreateUser',
+  components: { TopNavigationBar },
   data() {
     return {
 
       userToCreate: {
-        username: "",
-        full_name: "",
-        role: "USER",
-        email: "",
-        password: "",
-        confirm_password: "",
+        username: '',
+        full_name: '',
+        role: 'USER',
+        email: '',
+        password: '',
+        confirm_password: '',
       },
 
       feedback: {
-        message: "",
-        type: "error"
+        message: '',
+        type: 'error',
       },
 
 
-    }
+    };
   },
 
   computed: {
-    roles() { return this.$store.getters.getUserRoles; },
+    roles() {
+      return this.$store.getters[ 'users/getUserRoles' ];
+    },
 
     feedbackAlertClass() {
-      if (this.feedback.type === "error") return "alert-danger";
-      return "alert-success";
+      if ( this.feedback.type === 'error' ) return 'alert-danger';
+      return 'alert-success';
     },
 
     validPassword() {
 
-      if (this.userToCreate.password === "" || this.userToCreate.password.length < 3) return false;
+      if ( this.userToCreate.password === '' || this.userToCreate.password.length < 3 ) return false;
       return this.userToCreate.password === this.userToCreate.confirm_password;
-    }
+    },
 
   },
 
@@ -168,8 +170,8 @@ export default {
     async onCreate() {
 
       /* resetting feedback */
-      this.feedback.message = "";
-      this.feedback.type = "";
+      this.feedback.message = '';
+      this.feedback.type = '';
 
       const user = {
         username: this.userToCreate.username,
@@ -180,19 +182,19 @@ export default {
       };
 
       try {
-        await this.$store.dispatch("users_createUser", user);
-        await this.$router.push("/users");
+        await this.$store.dispatch( 'users/createUser', user );
+        await this.$router.push( '/users' );
 
-      } catch (e) {
+      } catch ( e ) {
         this.feedback.message = e.response.data.payload.error;
-        this.feedback.type = "error";
+        this.feedback.type = 'error';
       }
 
     },
 
   },
 
-}
+};
 </script>
 
 <style scoped>

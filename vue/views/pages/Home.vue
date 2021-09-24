@@ -88,8 +88,14 @@ export default {
     };
   },
 
-  mounted() {
+  created() {
 
+    /* check the logged in user type and redirect the route accordingly */
+    const userType = this.$store.getters[ 'auth/getUserType' ];
+
+    if ( userType === 'DOCTOR' ) {
+      this.$router.push( { name: 'pageDoctorHome' } );
+    }
 
   },
 
