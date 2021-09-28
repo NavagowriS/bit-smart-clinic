@@ -21,7 +21,7 @@
               </div>
             </template>
 
-            <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#modal__add_patient_to_visit">
+            <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#modal__add_patient_to_visit" v-if="isSTAFF">
               Add patients for the visit
             </button>
 
@@ -122,12 +122,15 @@ import CardSection from '@/components/CardSection';
 import ModalWindow from '@/components/ModalWindow';
 import TopNavigationBar from '@/components/TopNavigationBar';
 import {showErrorDialog} from '@/helpers/common';
+import {authMixins} from '@/mixins/authMixins.js';
 
 let _ = require( 'lodash' );
 
 export default {
   name: 'PageClinicVisitManage',
   components: { ModalWindow, CardSection, TopNavigationBar },
+
+  mixins: [authMixins],
 
   data() {
     return {

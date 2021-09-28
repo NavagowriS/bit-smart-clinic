@@ -31,7 +31,7 @@ export const clinicsRoutes = [
         component: PageClinicManage,
         meta: {
             requiresAuth: true,
-            hasAccess: ['ADMIN', 'STAFF'],
+            hasAccess: ['ADMIN', 'STAFF', 'DOCTOR'],
         },
     },
 
@@ -41,7 +41,7 @@ export const clinicsRoutes = [
         component: PageClinicVisitManage,
         meta: {
             requiresAuth: true,
-            hasAccess: ['ADMIN', 'STAFF'],
+            hasAccess: ['ADMIN', 'STAFF', 'DOCTOR'],
         },
     },
     {
@@ -50,7 +50,7 @@ export const clinicsRoutes = [
         component: PageClinicVisitPatientDetails,
         meta: {
             requiresAuth: true,
-            hasAccess: ['ADMIN', 'STAFF'],
+            hasAccess: ['ADMIN', 'STAFF', 'DOCTOR'],
         },
     },
     {
@@ -59,7 +59,7 @@ export const clinicsRoutes = [
         component: PageClinicPatientDetails,
         meta: {
             requiresAuth: true,
-            hasAccess: ['ADMIN', 'STAFF'],
+            hasAccess: ['ADMIN', 'STAFF', 'DOCTOR'],
         },
     },
 

@@ -12,9 +12,7 @@
           <CardSection class="mb-5">
             <template v-slot:header>Patients List</template>
 
-            <p>Create a new
-              <router-link to="/patients/create">patient profile</router-link>
-            </p>
+            <router-link class="btn btn-primary btn-sm mb-3" to="/patients/create">Create new patient profile</router-link>
 
             <div v-if="! isEmptyPatientsList">
               <table class="table table-bordered table-striped">
@@ -43,7 +41,9 @@
                   <td style="white-space: pre-line">{{ patient.address }}</td>
                   <td>{{ patient.guardian_name }}</td>
                   <td class="text-center">
-                    <router-link class="btn btn-sm btn-primary" :to="'/patients/edit/' + patient.id">Edit</router-link>
+                    <router-link class="btn btn-sm btn-secondary" :to="'/patients/edit/' + patient.id">
+                      <i class="bi bi-pencil-fill"></i>
+                    </router-link>
                   </td>
                 </tr>
 

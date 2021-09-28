@@ -1,3 +1,5 @@
+import PagePatientHome from '@/public_patient_views/PagePatientHome.vue';
+import PatientLogin from '@/public_patient_views/PatientLogin.vue';
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 
@@ -32,6 +34,17 @@ const routes = [
         path: '*',
         name: 'Page404',
         component: Page404,
+    },
+
+    {
+        path: '/patient-login',
+        name: 'PagePatientLogin',
+        component: PatientLogin,
+    },
+    {
+        path: '/public/patient',
+        name: 'PagePatientHome',
+        component: PagePatientHome,
     },
 
 ];

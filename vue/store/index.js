@@ -1,4 +1,6 @@
 import {clinicPatientsStore} from '@/store/modules/clinic_patients';
+import {publicPatientStore} from '@/store/modules/public_patient.js';
+import {specialityStore} from '@/store/modules/speciality.js';
 import Vue from 'vue';
 import Vuex from 'vuex';
 
@@ -19,8 +21,10 @@ export default new Vuex.Store( {
     actions: {},
     modules: {
         auth: authStore,
+        publicPatient: publicPatientStore,
         users: usersStore,
         doctors: doctorsStore,
+        specialities: specialityStore,
         patients: patientsStore,
         clinics: clinicsStore,
         clinicVisits: clinicVisitsStore,

@@ -5,6 +5,8 @@ namespace App\Models;
 
 
 use App\Core\Database\Database;
+use PDO;
+use PDOException;
 
 class Doctor implements IModel
 {
@@ -17,11 +19,17 @@ class Doctor implements IModel
     public ?DoctorSpeciality $doctor_speciality;
     public ?User $user;
 
-    public static function build( $array ): self
+    /**
+     * 
+     * @var null|Clinic[]
+     */
+    public ?array $clinics;
+
+    public static function build($array): self
     {
 
         $object = new self();
-        foreach ( $array as $key => $value ) {
+        foreach ($array as $key => $value) {
             $object->$key = $value;
         }
         return $object;
@@ -31,17 +39,17 @@ class Doctor implements IModel
      * @param int $id
      * @return Doctor
      */
-    public static function find( int $id ): ?Doctor
+    public static function find(int $id): ?Doctor
     {
         /** @var Doctor $result */
-        $result = Database::find( self::TABLE, $id, self::class );
+        $result = Database::find(self::TABLE, $id, self::class);
 
-        if ( !empty( $result ) ) {
-            $result->doctor_speciality = DoctorSpeciality::find( $result->speciality_id );
+        if (!empty($result)) {
+            $result->doctor_speciality = DoctorSpeciality::find($result->speciality_id);
 
-            if ( !empty( $result->user_id ) ) {
-                $result->user = User::find( $result->user_id );
-                unset( $result->user->password_hash );
+            if (!empty($result->user_id)) {
+                $result->user = User::find($result->user_id);
+                unset($result->user->password_hash);
             }
 
             return $result;
@@ -55,17 +63,17 @@ class Doctor implements IModel
      * @param int $offset
      * @return Doctor[]
      */
-    public static function findAll( $limit = 1000, $offset = 0 ): array
+    public static function findAll($limit = 1000, $offset = 0): array
     {
         /** @var Doctor[] $results */
-        $results = Database::findAll( self::TABLE, $limit, $offset, self::class, 'name' );
+        $results = Database::findAll(self::TABLE, $limit, $offset, self::class, 'name');
 
-        if ( !empty( $results ) ) {
+        if (!empty($results)) {
 
             $output = [];
 
-            foreach ( $results as $doctor ) {
-                $doctor->doctor_speciality = DoctorSpeciality::find( $doctor->speciality_id );
+            foreach ($results as $doctor) {
+                $doctor->doctor_speciality = DoctorSpeciality::find($doctor->speciality_id);
                 $output[] = $doctor;
             }
 
@@ -89,8 +97,7 @@ class Doctor implements IModel
             'speciality_id' => $this->speciality_id,
         ];
 
-        return Database::insert( self::TABLE, $data );
-
+        return Database::insert(self::TABLE, $data);
     }
 
     public function update(): bool
@@ -104,11 +111,36 @@ class Doctor implements IModel
             'user_id' => $this->user_id,
         ];
 
-        return Database::update( self::TABLE, $data, [ 'id' => $this->id ] );
+        return Database::update(self::TABLE, $data, ['id' => $this->id]);
     }
 
     public function delete(): bool
     {
-        return Database::delete( self::TABLE, 'id', $this->id );
+        return Database::delete(self::TABLE, 'id', $this->id);
+    }
+
+
+    /**
+     * @param int $associatedUserId 
+     * @return null|Doctor 
+     * @throws PDOException 
+     */
+    public static function findByAssociatedUser(int $associatedUserId): ?self
+    {
+        $db = Database::instance();
+        $statement = $db->prepare('SELECT * FROM doctors WHERE user_id=?');
+        $statement->execute([$associatedUserId]);
+
+        /**
+         * @var self $result
+         */
+        $result = $statement->fetchObject(self::class);
+
+        if (!empty($result)) {
+            $result->doctor_speciality = DoctorSpeciality::find($result->speciality_id);
+            $result->clinics = Clinic::findByDoctor($result->id);
+            return $result;
+        }
+        return null;
     }
 }

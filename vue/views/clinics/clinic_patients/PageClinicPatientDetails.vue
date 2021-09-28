@@ -14,13 +14,15 @@
                 <router-link :to="backLink" class="btn btn-secondary">
                   <i class="bi bi-arrow-left"></i>
                 </router-link>
-               <div class="">
+              <div class="">
+              
               {{ clinicPatient.patient.full_name }}'s {{ clinic.title }} Details
-               </div>
+                </div>
               </div>
             </template>
+                
+                <div class="">
 
-            <div class="">
               <table class="table table-bordered table-striped">
                 <thead>
                 <tr>
@@ -93,7 +95,6 @@ export default {
         name: 'pageClinic', params: { id: this.clinicId },
       };
     },
-
     /** @returns {number} */
     clinicId() {
       return parseInt( this.$route.params[ 'clinicId' ] );

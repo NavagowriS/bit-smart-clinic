@@ -8,21 +8,18 @@
 
     <div class="container">
       <div class="row">
-        <div class="col">
+        <div class="col-8">
 
           <CardSection>
             <template v-slot:header>Manage doctors</template>
 
-            <p>Create a new
-              <router-link to="/doctors/create">doctor profile</router-link>
-            </p>
+            <router-link class="btn btn-sm btn-primary mb-3" to="/doctors/create">Create new doctor profile</router-link>
 
 
             <table class="table table-sm table-bordered">
               <thead>
               <tr>
                 <th>Name</th>
-                <th>DoB</th>
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Speciality</th>
@@ -33,7 +30,6 @@
                 <td>
                   <router-link :to="'/doctors/edit/' + doctor.id">{{ doctor.name }}</router-link>
                 </td>
-                <td>{{ doctor.dob }}</td>
                 <td>{{ doctor.email }}</td>
                 <td>{{ doctor.phone }}</td>
                 <td>{{ doctor.doctor_speciality.speciality }}</td>
@@ -43,8 +39,13 @@
 
           </CardSection>
 
+        </div><!-- col -->
 
-        </div>
+
+        <div class="col-4">
+          <SpecialitiesCard/>
+        </div><!-- col -->
+
       </div>
     </div>
 
@@ -55,10 +56,11 @@
 <script>
 import CardSection from '@/components/CardSection';
 import TopNavigationBar from '@/components/TopNavigationBar';
+import SpecialitiesCard from '@/views/doctors/components/SpecialitiesCard.vue';
 
 export default {
   name: 'PageDoctorsList',
-  components: { CardSection, TopNavigationBar },
+  components: { SpecialitiesCard, CardSection, TopNavigationBar },
 
   data() {
     return {};

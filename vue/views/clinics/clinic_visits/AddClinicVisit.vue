@@ -7,7 +7,7 @@
 
       <div class="mb-3">
 
-        <div class="mb-3">
+        <div class="mb-3" v-if="isSTAFF">
           <button class="btn btn-sm btn-primary" data-bs-target="#modal__add_clinic_visit" data-bs-toggle="modal">Add new visit</button>
         </div>
 
@@ -28,8 +28,6 @@
           </tr>
           </tbody>
         </table>
-
-
 
 
       </div>
@@ -57,6 +55,7 @@ import {errorDialog} from '@/assets/libs/bs-dialog';
 import CardSection from '@/components/CardSection';
 import DateField from '@/components/fields/DateField';
 import ModalWindow from '@/components/ModalWindow';
+import {authMixins} from '@/mixins/authMixins.js';
 import moment from 'moment';
 
 const _ = require( 'lodash' );
@@ -64,6 +63,7 @@ const _ = require( 'lodash' );
 export default {
   name: 'AddClinicVisit',
   components: { DateField, ModalWindow, CardSection },
+  mixins: [authMixins],
 
   props: {
 

@@ -25,7 +25,7 @@
                 <h4>Doctor <i class="bi bi-arrow-right"></i> {{ selectedClinic.doctor_in_charge.name }}</h4>
               </div>
 
-              <div class="right_side">
+              <div class="right_side" v-if="isSTAFF">
                 <button class="btn btn-secondary" @click="$refs.modal_update_clinic_details.show()">
                   <i class="bi bi-pencil"></i> Edit
                 </button>
@@ -98,6 +98,8 @@ import CardSection from '@/components/CardSection';
 import ModalWindow from '@/components/ModalWindow';
 import TopNavigationBar from '@/components/TopNavigationBar';
 import {showErrorDialog} from '@/helpers/common.js';
+
+import {authMixins} from '@/mixins/authMixins.js';
 import ClinicPatientsList from '@/views/clinics/clinic_patients/ClinicPatientsList';
 import AddClinicVisit from '@/views/clinics/clinic_visits/AddClinicVisit';
 
@@ -107,6 +109,7 @@ let moment = require( 'moment' );
 export default {
   name: 'PageClinicManage',
   components: { AddClinicVisit, CardSection, ModalWindow, ClinicPatientsList, TopNavigationBar },
+  mixins: [authMixins],
 
   data() {
     return {
@@ -127,7 +130,7 @@ export default {
       return this.$store.getters[ 'doctors/getDoctors' ];
     },
 
-    backLink() {
+     backLink() {
       return {
         name: 'pageClinicsList', params: { id: this.clinicId },
       };

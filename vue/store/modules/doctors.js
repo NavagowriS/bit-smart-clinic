@@ -15,6 +15,9 @@ export const doctorsStore = {
 
             /** @type {DoctorSpeciality[]} */
             doctorSpecialities: [],
+
+            associatedWithUser: {},
+
         };
     },
 
@@ -31,6 +34,11 @@ export const doctorsStore = {
         getDoctorsSpecialities( state ) {
             return state.doctorSpecialities;
         },
+
+        getDoctorAssociatedWithUser( state ) {
+            return state.associatedWithUser;
+        },
+
     },
 
     mutations: {
@@ -72,6 +80,12 @@ export const doctorsStore = {
 
         async update( context, params ) {
             await axios.post( 'doctors/update.php', params );
+        },
+
+        async fetchByAssociatedUser( context, userId ) {
+            const response = await axios.post( 'doctors/get-by-associated-user.php', { id: userId } );
+            context.state.associatedWithUser = response.data.payload.data;
+
         },
 
     },

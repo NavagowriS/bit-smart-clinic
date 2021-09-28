@@ -30,12 +30,12 @@ try {
             'role' => $loggedInUser->role,
         ];
 
-        JsonResponse::validResponse( [ 'auth_key' => $key, 'user' => $user ] );
+        JSONResponse::validResponse( [ 'auth_key' => $key, 'user' => $user ] );
         return;
 
     }
 
-    JsonResponse::invalidResponse( 'Login failed' );
+    JSONResponse::invalidResponse( 'Login failed' );
     return;
 
 

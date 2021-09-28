@@ -13,14 +13,13 @@
 
           <!-- CARD: Patient details -->
           <CardSection :no-title="true" class="mb-3">
-              
+
               <div class="left_side">
                 <router-link :to="backLink" class="btn btn-secondary">
                   <i class="bi bi-arrow-left"></i>
                 </router-link>
               </div>
-
-              <div class="section__patient_details d-flex justify-content-between">
+            <div class="section__patient_details d-flex justify-content-between">
 
               <div class="d-flex flex-column">
                 <h2 class="">{{ patient.full_name }}</h2>
@@ -208,7 +207,6 @@ export default {
         name: 'pageClinicVisitManage', params: { id: this.clinicId },
       };
     },
-
     /** @returns {number} */
     clinicVisitPatientId() {
       return parseInt( this.$route.params[ 'clinicVisitPatientId' ] );

@@ -5,7 +5,7 @@
     <CardSection v-if="clinicPatientsList">
       <template v-slot:header>Patients in the clinic</template>
 
-      <div class="mb-3">
+      <div class="mb-3" v-if="isSTAFF">
         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal__add_patients">Add patients</button>
       </div>
 
@@ -88,12 +88,15 @@
 import {drpDatePrompt, errorDialog} from '@/assets/libs/bs-dialog';
 import CardSection from '@/components/CardSection';
 import ModalWindow from '@/components/ModalWindow';
+import {authMixins} from '@/mixins/authMixins.js';
 import lodash from 'lodash';
 import moment from 'moment';
 
 export default {
   name: 'ClinicPatientsList',
   components: { ModalWindow, CardSection },
+
+  mixins: [authMixins],
 
   props: {
 

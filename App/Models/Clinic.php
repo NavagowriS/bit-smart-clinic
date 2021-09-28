@@ -5,6 +5,7 @@ namespace App\Models;
 
 
 use App\Core\Database\Database;
+use PDO;
 
 class Clinic implements IModel
 {
@@ -45,7 +46,6 @@ class Clinic implements IModel
             $result->doctor_in_charge = Doctor::find( $result->doctor_in_charge_id );
 
             return $result;
-
         }
         return null;
     }
@@ -87,7 +87,6 @@ class Clinic implements IModel
         ];
 
         return Database::insert( self::TABLE, $data );
-
     }
 
 
@@ -111,5 +110,60 @@ class Clinic implements IModel
     public function delete(): bool
     {
         return Database::delete( self::TABLE, "id", $this->id );
+    }
+
+
+    public static function findByDoctor( int $doctorId )
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'SELECT * from clinics WHERE doctor_in_charge_id=?' );
+        $statement->execute( [ $doctorId ] );
+
+        /** @var self[] $result */
+        $result = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+
+        if ( !empty( $result ) ) {
+            return $result;
+        }
+
+        return [];
+    }
+
+    /**
+     * Get all the clinic associated with the patient
+     * @param Patient $patient
+     * @return Clinic[]
+     */
+    public static function findByPatient( Patient $patient ): array
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'SELECT * from clinic_patients where patient_id=?' );
+
+        $statement->execute( [ $patient->id ] );
+
+        /** @var ClinicPatient[] $clinicPatients */
+        $clinicPatients = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+
+        if ( !empty( $clinicPatients ) ) {
+
+            $output = [];
+
+            foreach ( $clinicPatients as $clinicPatient ) {
+                $clinic = Clinic::find( $clinicPatient->clinic_id );
+                $visitDetails = ClinicPatient::getAllClinicVisitDetails( $clinicPatient->id );
+
+                $output[] = [
+                    'clinic' => $clinic,
+                    'visitDetails' => $visitDetails,
+                ];
+
+            }
+
+            return $output;
+
+        }
+
+        return [];
+
     }
 }

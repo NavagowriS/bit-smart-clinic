@@ -41,6 +41,7 @@
  * @property {DoctorSpeciality} doctor_speciality
  * @property {number} user_id
  * @property {User} user
+ * @property {Clinic[]} clinics
  */
 
 
@@ -103,4 +104,11 @@
  * @property {string} visit_date
  * @property {ClinicVisit} clinic_visit
  * @property {ClinicPatient} clinic_patient
+ */
+
+
+/**
+ * @typedef {Object} ClinicAndVisits
+ * @property {Clinic} clinic
+ * @property {ClinicVisitPatient[]} visitDetails
  */
