@@ -3,6 +3,7 @@ import '@popperjs/core';
 
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import Chart from 'chart.js/auto';
 import Vue from 'vue';
 
 import App from './App';
@@ -39,6 +40,9 @@ axios.interceptors.response.use( undefined, ( error => {
 
     return Promise.reject( error );
 } ) );
+
+
+Chart.defaults.font.family = 'Sora';
 
 
 /* Vue initialization */

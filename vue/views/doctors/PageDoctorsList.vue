@@ -16,7 +16,7 @@
             <router-link class="btn btn-sm btn-primary mb-3" to="/doctors/create">Create new doctor profile</router-link>
 
 
-            <table class="table table-sm table-bordered">
+            <table class="table table-bordered table-striped">
               <thead>
               <tr>
                 <th>Name</th>

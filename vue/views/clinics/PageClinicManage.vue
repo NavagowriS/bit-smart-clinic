@@ -9,18 +9,11 @@
       <!-- section: clinic details -->
       <div class="row">
         <div class="col">
-         
           <CardSection class="mb-3" v-if="selectedClinic" :no-title="true">
-            
+
             <div class="d-flex justify-content-between">
 
-                <div class="left_side">
-                <router-link :to="backLink" class="btn btn-secondary">
-                  <i class="bi bi-arrow-left"></i>
-                </router-link>
-              </div>
-
-              <div class="centre">
+              <div class="left_side">
                 <h1>{{ selectedClinic.title }}</h1>
                 <h4>Doctor <i class="bi bi-arrow-right"></i> {{ selectedClinic.doctor_in_charge.name }}</h4>
               </div>
@@ -38,9 +31,9 @@
       </div><!-- row -->
 
       <!-- section: add clinic visits -->
-      <div class="row">
+      <div class="row mb-3">
         <div class="col">
-          <AddClinicVisit :clinic-id="clinicId"/>
+          <router-link class="btn btn-success btn-lg" :to="{name: 'pageListAppointments', params: {clinicId: selectedClinic.id}}">Appointments</router-link>
         </div>
       </div>
 
@@ -130,16 +123,11 @@ export default {
       return this.$store.getters[ 'doctors/getDoctors' ];
     },
 
-     backLink() {
-      return {
-        name: 'pageClinicsList', params: { id: this.clinicId },
-      };
-    },
-
     /** @returns {Clinic} */
     selectedClinic() {
       return this.$store.getters[ 'clinics/getClinic' ];
     },
+
 
   },
 

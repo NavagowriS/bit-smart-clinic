@@ -3,25 +3,50 @@
   <div>
     <TopNavigationBar/>
 
+
     <div class="container" v-if="loaded">
+
+      <div class="row mb-3">
+        <div class="col">
+
+          <div class="mb-3 text-white">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="chk_vis_chart_weight" v-model="chartsOptions.visibility.chartWeight">
+              <label class="form-check-label" for="chk_vis_chart_weight">Show weight chart</label>
+            </div>
+
+
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="chk_vis_chart_bp" v-model="chartsOptions.visibility.chartBp">
+              <label class="form-check-label" for="chk_vis_chart_bp">Show BP chart</label>
+            </div>
+
+          </div>
+
+
+          <CardSection :no-title="true" class="mb-3" v-show="chartsOptions.visibility.chartWeight">
+            <canvas height="200" width="100%" id="chart_weights"></canvas>
+          </CardSection>
+
+          <CardSection :no-title="true" v-show="chartsOptions.visibility.chartBp">
+            <canvas height="200" width="100%" id="chart_bps"></canvas>
+          </CardSection>
+
+        </div>
+      </div>
+
 
       <div class="row">
         <div class="col">
 
           <CardSection>
-            <template v-slot:header>
-              <div class="d-flex gap-2 align-items-center mb-2">
-                <router-link :to="backLink" class="btn btn-secondary">
-                  <i class="bi bi-arrow-left"></i>
-                </router-link>
-              <div class="">
-              
-              {{ clinicPatient.patient.full_name }}'s {{ clinic.title }} Details
-                </div>
+            <template v-slot:header>{{ clinicPatient.patient.full_name }}'s {{ clinic.title }} Details</template>
+
+            <div class="">
+
+              <div class="mb-3">
+                <button class="btn btn-primary" @click="$refs.modal_add_appointment.show()">Add new appointment</button>
               </div>
-            </template>
-                
-                <div class="">
 
               <table class="table table-bordered table-striped">
                 <thead>
@@ -35,10 +60,10 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr v-for="item in visitDetails" :key="item.id">
+                <tr v-for="item in clinicPatientAppointments" :key="item.id">
                   <td>
-                    <router-link :to="_renderClinicVisitDetailsLink(item)">
-                      {{ item.visit_date }}
+                    <router-link :to="_renderAppointmentLink(item)">
+                      {{ item.clinic_date }}
                     </router-link>
                   </td>
                   <td>{{ item.token_number }}</td>
@@ -59,42 +84,100 @@
       </div><!-- row -->
 
     </div><!-- container -->
+
+
+    <ModalWindow id="modal_aa" ref="modal_add_appointment" size="md">
+
+
+      <div class="row mb-3 justify-content-center">
+        <div class="col">
+
+          <div class="form_add_appointment">
+            <div class="mb-3">
+              <label class="form-label">Clinic Date</label>
+              <DateField v-model="formAddAppointment.clinic_date"/>
+            </div>
+
+            <div class="text-center">
+              <button class="btn btn-primary" @click="onCheckAppointment()">Get token number</button>
+            </div>
+
+          </div>
+        </div><!-- col -->
+      </div><!-- row -->
+
+      <div class="row">
+        <div class="col">
+
+          <div class="mb-3" v-if="formAddAppointment.token_number !== 0">
+
+            <div class="alert alert-primary text-center">
+              <p class="lead">Available token on {{ formAddAppointment.clinic_date }}</p>
+              <h1>{{ formAddAppointment.token_number }}</h1>
+
+              <button class="btn btn-success" @click="onBookAppointment()">Book this appointment</button>
+
+            </div>
+
+          </div>
+
+          <div class="alert alert-success" v-if="bookingSuccessStatus">
+            Appointment set!
+          </div>
+
+
+        </div><!-- col -->
+      </div>
+
+
+    </ModalWindow>
+
+
   </div><!-- template -->
 
 </template>
 
 <script>
+import {errorDialog} from '@/assets/libs/bs-dialog.js';
 import CardSection from '@/components/CardSection.vue';
+import DateField from '@/components/fields/DateField.vue';
+import ModalWindow from '@/components/ModalWindow.vue';
 import TopNavigationBar from '@/components/TopNavigationBar.vue';
 import {showErrorDialog} from '@/helpers/common.js';
+import Chart from 'chart.js/auto';
+import moment from 'moment';
+
+const _ = require( 'lodash' );
 
 export default {
   name: 'PageClinicPatientDetails',
-  components: { CardSection, TopNavigationBar },
+  components: { DateField, ModalWindow, CardSection, TopNavigationBar },
 
   data() {
     return {
 
       loaded: false,
 
+      formAddAppointment: {
+        clinic_date: moment().format( 'YYYY-MM-DD' ),
+        token_number: 0,
+      },
+
+      bookingSuccessStatus: false,
+
+      chartsOptions: {
+        visibility: {
+          chartWeight: false,
+          chartBp: true,
+        },
+      },
+
+
     };
   },
 
   computed: {
 
-     clinicId() {
-      return _.toNumber( this.$route.params.clinicId );
-    },
-
-    visitId() {
-      return _.toNumber( this.$route.params.visitId );
-    },
-
-    backLink() {
-      return {
-        name: 'pageClinic', params: { id: this.clinicId },
-      };
-    },
     /** @returns {number} */
     clinicId() {
       return parseInt( this.$route.params[ 'clinicId' ] );
@@ -115,10 +198,69 @@ export default {
       return this.clinicPatient.clinic;
     },
 
-    /** @returns {ClinicVisitPatient[]} */
-    visitDetails() {
-      return this.clinicPatient.visit_details;
+    /** @returns {ClinicAppointment[]} */
+    clinicPatientAppointments() {
+      return this.$store.getters[ 'clinicAppointments/getClinicPatientAppointments' ];
     },
+
+    weightChartData() {
+
+      const data = {
+        labels: [],
+        datasets: [
+          {
+            label: 'Weight',
+            borderColor: '#ff3a8c',
+            tension: 0.2,
+            data: [],
+          },
+        ],
+      };
+
+      const appointments = _.clone( this.clinicPatientAppointments );
+      appointments.reverse();
+
+      appointments.forEach( item => {
+        if ( item[ 'status' ] === 'COMPLETED' ) {
+          data.labels.push( item[ 'clinic_date' ] );
+          data.datasets[ 0 ].data.push( item[ 'param_weight' ] );
+        }
+      } );
+      return data;
+    },
+
+    bpChartData() {
+      const data = {
+        labels: [],
+        datasets: [
+          {
+            label: 'SBP',
+            backgroundColor: '#ff3a8c',
+            tension: 0.2,
+            data: [],
+          },
+          {
+            label: 'DBP',
+            backgroundColor: '#3a4aff',
+            tension: 0.2,
+            data: [],
+          },
+        ],
+      };
+
+      const appointments = _.clone( this.clinicPatientAppointments );
+      appointments.reverse();
+
+      appointments.forEach( item => {
+        if ( item[ 'status' ] === 'COMPLETED' ) {
+          data.labels.push( item[ 'clinic_date' ] );
+          data.datasets[ 0 ].data.push( item[ 'param_sbp' ] );
+          data.datasets[ 1 ].data.push( item[ 'param_dbp' ] );
+        }
+      } );
+      return data;
+    },
+
 
   },
 
@@ -128,6 +270,7 @@ export default {
     try {
 
       await this.$store.dispatch( 'clinicPatients/fetch', this.clinicPatientId );
+      await this.$store.dispatch( 'clinicAppointments/fetchByClinicPatient', this.clinicPatientId );
 
       this.loaded = true;
 
@@ -135,23 +278,92 @@ export default {
       showErrorDialog( e.response, 'Failed to fetch patient details' );
     }
 
+
+    this.$nextTick( () => {
+
+
+      /* chart chart_appointments_stats */
+      const chartWeights = new Chart( 'chart_weights', {
+        type: 'line',
+        data: this.weightChartData,
+        options: {
+          maintainAspectRatio: false,
+        },
+      } );
+
+      const chartBPs = new Chart( 'chart_bps', {
+        type: 'bar',
+        data: this.bpChartData,
+        options: {
+          maintainAspectRatio: false,
+        },
+      } );
+
+      chartWeights.canvas.parentNode.style.height = '200px';
+
+
+    } );
+
   },
 
 
   methods: {
 
+    async onCheckAppointment() {
+
+      try {
+
+        const params = {
+          clinic_id: this.clinicId,
+          clinic_date: this.formAddAppointment.clinic_date,
+        };
+
+        this.formAddAppointment.token_number = await this.$store.dispatch( 'publicPatient/checkAppointmentToken', params );
+
+      } catch ( e ) {
+        console.log( e );
+      }
+
+    },
+
+    async onBookAppointment() {
+
+      this.bookingSuccessStatus = false;
+
+      try {
+
+        const params = {
+          clinic_id: this.clinicId,
+          clinic_date: this.formAddAppointment.clinic_date,
+          clinic_patient_id: this.clinicPatientId,
+          token_number: this.formAddAppointment.token_number,
+        };
+
+        await this.$store.dispatch( 'publicPatient/bookAppointment', params );
+
+        this.bookingSuccessStatus = true;
+
+        await this.$store.dispatch( 'clinicAppointments/fetchByClinicPatient', this.clinicPatientId );
+
+      } catch ( e ) {
+        errorDialog( {
+          message: 'Failed to book appointment',
+        } );
+      }
+    },
+
+
     /**
      * Render clinic visit detail page url for individual patient
      *
-     * @param visitPatient
+     * @param appointment
      */
-    _renderClinicVisitDetailsLink( visitPatient ) {
+    _renderAppointmentLink( appointment ) {
       return {
-        name: 'pageClinicVisitDetails',
+        name: 'pageSingleAppointment',
         params: {
           clinicId: this.clinicId,
-          visitId: visitPatient.clinic_visit_id,
-          clinicVisitPatientId: visitPatient.id,
+          appointmentId: appointment.id,
         },
       };
     },

@@ -1,14 +1,11 @@
 <template>
 
-  <div class="h-100">
-
+  <div class="">
     <TopNavigationBar/>
-
 
     <div class="container" v-if="loaded">
 
       <div class="row">
-
         <div class="col">
 
           <!-- CARD: Patient details -->
@@ -33,9 +30,9 @@
 
             </div>
             <!-- section: patient_details -->
-
           </CardSection>
           <!-- CARD: patient details -->
+
 
           <div class="d-flex justify-content-between align-items-center text-white mb-3">
 
@@ -50,11 +47,12 @@
             <div class="d-flex flex-column align-items-center gap-2">
               <div class="lead">TOKEN</div>
               <div class="token_number fw-bold">
-                {{ clinicVisitPatient.token_number }}
+                {{ appointment.token_number }}
               </div>
             </div>
 
           </div>
+
 
           <!-- CARD: Visit details -->
           <CardSection class="mb-5">
@@ -67,7 +65,7 @@
 
                 <div class="visit_status d-flex gap-2 mb-3">
                   <div class="lead fw-bold">STATUS:</div>
-                  <div class="lead fw-bold" :style="statusColorClass">{{ clinicVisitPatient.status }}</div>
+                  <div class="lead fw-bold" :style="statusColorClass">{{ appointment.status }}</div>
                 </div>
                 <!-- visit status -->
 
@@ -75,29 +73,29 @@
 
                   <div class="mb-3">
                     <label class="form-label">Weight (kg)</label>
-                    <input type="number" class="form-control" v-model="clinicVisitPatient.param_weight" :disabled="formDisabled">
+                    <input type="number" class="form-control" v-model="appointment.param_weight" :disabled="formDisabled">
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label">Height (m)</label>
-                    <input type="number" class="form-control" v-model="clinicVisitPatient.param_height" :disabled="formDisabled">
+                    <input type="number" class="form-control" v-model="appointment.param_height" :disabled="formDisabled">
                   </div>
 
 
                   <div class="mb-3">
                     <label class="form-label">SBP (mmHg)</label>
-                    <input type="number" class="form-control" v-model="clinicVisitPatient.param_sbp" :disabled="formDisabled">
+                    <input type="number" class="form-control" v-model="appointment.param_sbp" :disabled="formDisabled">
                   </div>
 
 
                   <div class="mb-3">
                     <label class="form-label">DBP (mmHg)</label>
-                    <input type="number" class="form-control" v-model="clinicVisitPatient.param_dbp" :disabled="formDisabled">
+                    <input type="number" class="form-control" v-model="appointment.param_dbp" :disabled="formDisabled">
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label">Sugar Level (mg/dL)</label>
-                    <input type="number" class="form-control" v-model="clinicVisitPatient.param_blood_sugar" :disabled="formDisabled">
+                    <input type="number" class="form-control" v-model="appointment.param_blood_sugar" :disabled="formDisabled">
                   </div>
 
                 </div>
@@ -106,7 +104,7 @@
                 <div class="visit_doctor_remarks">
                   <div class="mb-3">
                     <label class="form-label">Doctor remarks</label>
-                    <textarea rows="20" class="form-control" v-model="clinicVisitPatient.doctor_remarks" :disabled="formDisabled"></textarea>
+                    <textarea rows="20" class="form-control" v-model="appointment.doctor_remarks" :disabled="formDisabled"></textarea>
                   </div>
                 </div>
 
@@ -124,7 +122,7 @@
 
                 <!-- right -->
                 <div class="">
-                  <button class="btn btn-danger" @click="$refs.modal_confirm_remove_patient_visit.show()">
+                  <button class="btn btn-danger" @click="$refs.modal_remove_appointment.show()">
                     <i class="bi bi-trash-fill"></i> Remove
                   </button>
                 </div>
@@ -138,43 +136,45 @@
           </CardSection>
           <!-- CARD: Visit details -->
 
-        </div>
 
-      </div>
+        </div><!-- col -->
+      </div><!-- row -->
+
     </div><!-- container -->
-
     <div class="text-white text-center mt-5" v-else>
       <h3>Loading...</h3>
 
     </div>
 
+
     <!-- MODAL: Confirm delete visit detail -->
-    <ModalWindow id="modal_confirm_remove_patient_visit" ref="modal_confirm_remove_patient_visit" title="Confirm removal">
+    <ModalWindow id="modal_remove_appointment" ref="modal_remove_appointment" title="Confirm removal">
 
       <div class="text-center">
-        <p>Are you sure to remove the visit details?</p>
+        <p>Are you sure to remove the appointment details?</p>
         <p class="text-danger fw-bold">This action is irreversible</p>
 
         <button class="btn btn-danger" @click="onRemove()">
-          Confirm Removal</button>
+          Confirm Removal
+        </button>
       </div>
 
     </ModalWindow>
 
-
-  </div><!-- template -->
+  </div>
 
 </template>
 
 <script>
-import {successDialog} from '@/assets/libs/bs-dialog';
-import CardSection from '@/components/CardSection';
+import {successDialog} from '@/assets/libs/bs-dialog.js';
+import CardSection from '@/components/CardSection.vue';
 import ModalWindow from '@/components/ModalWindow.vue';
-import TopNavigationBar from '@/components/TopNavigationBar';
-import {showErrorDialog} from '@/helpers/common';
+import TopNavigationBar from '@/components/TopNavigationBar.vue';
+import {showErrorDialog} from '@/helpers/common.js';
+import _ from 'lodash';
 
 export default {
-  name: 'PageClinicVisitPatientDetails',
+  name: 'PageSingleAppointment',
   components: { ModalWindow, CardSection, TopNavigationBar },
 
   data() {
@@ -196,29 +196,41 @@ export default {
   },
 
   computed: {
-
-    /** @returns {number} */
-    clinicVisitPatientId() {
-      return parseInt( this.$route.params[ 'clinicVisitPatientId' ] );
+    clinicId() {
+      return _.toNumber( this.$route.params[ 'clinicId' ] );
     },
 
-    /** @returns {ClinicVisitPatient} */
-    clinicVisitPatient() {
-      return this.$store.getters[ 'clinicVisits/getClinicVisitPatient' ];
+    appointmentId() {
+      return _.toNumber( this.$route.params[ 'appointmentId' ] );
+    },
+
+    backLink() {
+      return {
+        name: 'pageListAppointments', params: { id: this.clinicId },
+      };
+    },
+
+    /** @returns {Clinic} */
+    clinic() {
+      return this.$store.getters[ 'clinics/getClinic' ];
+    },
+
+    /** @returns {ClinicAppointment} */
+    appointment() {
+      return this.$store.getters[ 'clinicAppointments/getClinicAppointment' ];
     },
 
     /** @returns {Patient} */
     patient() {
-      return this.clinicVisitPatient.clinic_patient.patient;
+      return this.appointment.clinic_patient.patient;
     },
 
     statusColorClass() {
-      return `color: ${ this.status.colorCodes[ this.clinicVisitPatient.status ] }`;
+      return `color: ${ this.status.colorCodes[ this.appointment.status ] }`;
     },
 
-
     formDisabled() {
-      return this.clinicVisitPatient.status !== 'ACTIVE';
+      return this.appointment.status !== 'ACTIVE';
     },
 
   },
@@ -227,13 +239,15 @@ export default {
 
     try {
 
-      /* fetch clinic patient details */
-      await this.$store.dispatch( 'clinicVisits/fetchPatientByClinicVisit', this.clinicVisitPatientId );
+      // fetch clinic details
+      await this.$store.dispatch( 'clinics/fetch', this.clinicId );
+
+      await this.$store.dispatch( 'clinicAppointments/fetch', this.appointmentId );
 
       this.loaded = true;
 
     } catch ( e ) {
-      showErrorDialog( e.response, 'Failed to fetch patient\'s visit details' );
+
     }
 
   },
@@ -248,17 +262,17 @@ export default {
       try {
 
         const params = {
-          id: this.clinicVisitPatient.id,
-          status: this.clinicVisitPatient.status,
-          param_weight: this.clinicVisitPatient.param_weight,
-          param_height: this.clinicVisitPatient.param_height,
-          param_sbp: this.clinicVisitPatient.param_sbp,
-          param_dbp: this.clinicVisitPatient.param_dbp,
-          param_blood_sugar: this.clinicVisitPatient.param_blood_sugar,
-          doctor_remarks: this.clinicVisitPatient.doctor_remarks,
+          id: this.appointment.id,
+          status: this.appointment.status,
+          param_weight: this.appointment.param_weight,
+          param_height: this.appointment.param_height,
+          param_sbp: this.appointment.param_sbp,
+          param_dbp: this.appointment.param_dbp,
+          param_blood_sugar: this.appointment.param_blood_sugar,
+          doctor_remarks: this.appointment.doctor_remarks,
         };
 
-        await this.$store.dispatch( 'clinicVisits/updateVisitPatient', params );
+        await this.$store.dispatch( 'clinicAppointments/update', params );
 
         successDialog( {
           message: 'Details updated successfully',
@@ -279,16 +293,15 @@ export default {
       try {
 
         const params = {
-          id: this.clinicVisitPatient.id,
+          id: this.appointment.id,
           status: status,
         };
 
-        await this.$store.dispatch( 'clinicVisits/updateVisitPatientStatus', params );
+        await this.$store.dispatch( 'clinicAppointments/updateStatus', params );
 
         successDialog( { message: 'Status updated!' } );
 
-        /* fetch clinic visit patient details */
-        await this.$store.dispatch( 'clinicVisits/fetchPatientByClinicVisit', this.clinicVisitPatientId );
+        await this.$store.dispatch( 'clinicAppointments/fetch', this.appointmentId );
 
 
       } catch ( e ) {
@@ -297,6 +310,7 @@ export default {
 
     },
 
+
     /**
      * Delete the current patient's clinic visit detail
      */
@@ -304,15 +318,14 @@ export default {
 
       try {
 
-        await this.$store.dispatch( 'clinicVisits/removePatient', this.clinicVisitPatientId );
+        await this.$store.dispatch( 'clinicAppointments/remove', this.appointment.id );
 
-        this.$refs.modal_confirm_remove_patient_visit.close();
+        this.$refs.modal_remove_appointment.close();
 
         await this.$router.push( {
-          name: 'pageClinicVisitManage',
+          name: 'pageListAppointments',
           params: {
             clinicId: this.$route.params.clinicId,
-            visitId: this.$route.params.visitId,
           },
         } );
 
@@ -333,5 +346,4 @@ export default {
   font-size: 5rem;
   line-height: 3.5rem;
 }
-
 </style>

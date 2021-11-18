@@ -22,6 +22,9 @@ class ClinicPatient implements IModel
     /** @var ClinicVisitPatient[]|null */
     public ?array $visit_details;
 
+    /** @var ClinicAppointment[]|null */
+    public ?array $appointments;
+
 
     public static function build( $array ): self
     {
@@ -47,6 +50,7 @@ class ClinicPatient implements IModel
             $result->clinic = Clinic::find( $result->clinic_id );
 
             $result->visit_details = self::getAllClinicVisitDetails( $id );
+            $result->appointments = self::getAllAppointments( $id );
 
             return $result;
         }
@@ -150,6 +154,20 @@ class ClinicPatient implements IModel
         if ( !empty( $results ) ) {
             return $results;
         }
+
+        return [];
+    }
+
+    public static function getAllAppointments( int $clinicPatientId ): array
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'select * from clinic_appointments where clinic_patient_id=? order by clinic_date desc' );
+
+        $statement->execute( [ $clinicPatientId ] );
+
+        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+
+        if ( !empty( $results ) ) return $results;
 
         return [];
     }

@@ -1,3 +1,5 @@
+import PageListAppointments from '@/views/clinics/appointments/PageListAppointments.vue';
+import PageSingleAppointment from '@/views/clinics/appointments/PageSingleAppointment.vue';
 import PageClinicPatientDetails from '@/views/clinics/clinic_patients/PageClinicPatientDetails.vue';
 import PageClinicVisitManage from '@/views/clinics/clinic_visits/PageClinicVisitManage';
 import PageClinicVisitPatientDetails from '@/views/clinics/clinic_visits/PageClinicVisitPatientDetails';
@@ -34,7 +36,24 @@ export const clinicsRoutes = [
             hasAccess: ['ADMIN', 'STAFF', 'DOCTOR'],
         },
     },
-
+    {
+        path: '/clinics/:clinicId/appointments',
+        name: 'pageListAppointments',
+        component: PageListAppointments,
+        meta: {
+            requiresAuth: true,
+            hasAccess: ['ADMIN', 'STAFF', 'DOCTOR'],
+        },
+    },
+    {
+        path: '/clinics/:clinicId/appointments/:appointmentId',
+        name: 'pageSingleAppointment',
+        component: PageSingleAppointment,
+        meta: {
+            requiresAuth: true,
+            hasAccess: ['ADMIN', 'STAFF', 'DOCTOR'],
+        },
+    },
     {
         path: '/clinics/:clinicId/visits/:visitId',
         name: 'pageClinicVisitManage',

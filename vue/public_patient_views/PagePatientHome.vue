@@ -35,6 +35,10 @@
 
           <div class="">
 
+            <router-link class="btn btn-sm btn-primary mb-2"
+                         :to="generateBookAppointmentLink(item)">Book appointment
+            </router-link>
+
             <table class="table table-sm table-bordered">
               <thead>
               <tr>
@@ -45,10 +49,10 @@
               </tr>
               </thead>
               <tbody>
-              <tr v-for="visit in item.visitDetails">
-                <td class="text-end">{{ visit.visit_date }}</td>
-                <td class="text-end">{{ visit.token_number }}</td>
-                <td class="text-center">{{ visit.status }}</td>
+              <tr v-for="appointment in item.appointments">
+                <td class="text-end">{{ appointment.clinic_date }}</td>
+                <td class="text-end">{{ appointment.token_number }}</td>
+                <td class="text-center">{{ appointment.status }}</td>
                 <th></th>
               </tr>
               </tbody>
@@ -115,7 +119,19 @@ export default {
 
 
   methods: {
-    //
+
+    /**
+     *
+     * @param {ClinicAndVisits} data
+     */
+    generateBookAppointmentLink( data ) {
+      return {
+        name: 'PageBookAppointment',
+        params: { clinicPatientId: data.clinicPatient.id },
+      };
+    },
+
+
   },
 
 

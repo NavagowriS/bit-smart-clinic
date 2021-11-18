@@ -89,6 +89,25 @@
  */
 
 /**
+ * @typedef {Object} ClinicAppointment
+ * @property {number} id
+ * @property {number} clinic_id
+ * @property {number} clinic_patient_id
+ * @property {ClinicPatient} clinic_patient
+ * @property {string} clinic_date
+ * @property {Clinic} clinic
+ * @property {number} token_number
+ * @property {string} status
+ * @property {number} param_weight
+ * @property {number} param_height
+ * @property {number} param_sbp
+ * @property {number} param_dbp
+ * @property {number} param_blood_sugar
+ * @property {string} doctor_remarks
+ */
+
+
+/**
  * @typedef {Object} ClinicVisitPatient
  * @property {number} id
  * @property {number} clinic_patient_id
@@ -111,4 +130,6 @@
  * @typedef {Object} ClinicAndVisits
  * @property {Clinic} clinic
  * @property {ClinicVisitPatient[]} visitDetails
+ * @property {ClinicPatient} clinicPatient
+ * @property {ClinicAppointment[]} appointments
  */

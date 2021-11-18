@@ -11,7 +11,7 @@
           <button class="btn btn-sm btn-primary" data-bs-target="#modal__add_clinic_visit" data-bs-toggle="modal">Add new visit</button>
         </div>
 
-        <h4>Latest visits</h4>
+        <h4>Latest visits - some changes</h4>
         <table class="table table-bordered">
           <thead>
           <tr>
