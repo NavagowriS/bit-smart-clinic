@@ -1,5 +1,6 @@
 import {clinicAppointmentsStore} from '@/store/modules/clinic_appointments.js';
 import {clinicPatientsStore} from '@/store/modules/clinic_patients';
+import {pharmacyDrugsStore} from '@/store/modules/pharmacy_drugs.js';
 import {publicPatientStore} from '@/store/modules/public_patient.js';
 import {specialityStore} from '@/store/modules/speciality.js';
 import Vue from 'vue';
@@ -31,5 +32,8 @@ export default new Vuex.Store( {
         clinicVisits: clinicVisitsStore,
         clinicPatients: clinicPatientsStore,
         clinicAppointments: clinicAppointmentsStore,
+
+        pharmacyDrugs: pharmacyDrugsStore,
+
     },
 } );

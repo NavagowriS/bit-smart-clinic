@@ -4,6 +4,8 @@ namespace App\Models\Pharmacy;
 
 use App\Core\Database\Database;
 use App\Models\IModel;
+use PDO;
+use stdClass;
 
 class Drug implements IModel
 {
@@ -13,6 +15,8 @@ class Drug implements IModel
     public ?int $id;
     public ?string $drug_name, $generic_name, $brand_name;
 
+    /** @var DrugTag[] */
+    public ?array $drugTags;
 
     /**
      * @param $array
@@ -64,4 +68,39 @@ class Drug implements IModel
     {
         return Database::delete( self::TABLE, 'id', $this->id );
     }
+
+    public function addTag( DrugTag $tag ): int
+    {
+
+        $data = [
+            'drug_id' => $this->id,
+            'tag_id' => $tag->id,
+        ];
+
+        return Database::insert( 'pharma_drug_tags', $data );
+
+    }
+
+    public static function getAllTags( Drug $drug ): array
+    {
+        $db = Database::instance();
+
+        $statement = $db->prepare( 'select * from pharma_drug_tag where drug_id=?' );
+        $statement->execute( [ $drug->id ] );
+
+        $results = $statement->fetchAll( PDO::class, stdClass::class );
+
+        $tags = [];
+
+        if ( !empty( $results ) ) {
+            foreach ( $results as $result ) {
+                $tags[] = DrugTag::find( $result->tag_id );
+            }
+
+
+            return $tags;
+        }
+        return [];
+    }
+
 }

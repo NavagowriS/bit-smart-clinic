@@ -6,11 +6,16 @@
 
     <div class="container">
 
-      <div class="row">
-        <div class="col">
-
-
+      <div class="row g-2">
+        <div class="col-3">
+         <PharmaSidebar/>
         </div><!-- col -->
+
+
+        <div class="col">
+          <router-view/>
+        </div>
+
       </div><!-- row -->
 
     </div>
@@ -22,11 +27,13 @@
 </template>
 
 <script>
+import CardSection from '@/components/CardSection.vue';
 import TopNavigationBar from '@/components/TopNavigationBar.vue';
+import PharmaSidebar from '@/views/pharma/components/PharmaSidebar.vue';
 
 export default {
   name: 'PagePharmaHome',
-  components: { TopNavigationBar },
+  components: { PharmaSidebar, CardSection, TopNavigationBar },
 };
 </script>
 

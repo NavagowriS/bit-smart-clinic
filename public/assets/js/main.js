@@ -44,6 +44,7 @@ module.exports = function xhrAdapter(config) {
   return new Promise(function dispatchXhrRequest(resolve, reject) {
     var requestData = config.data;
     var requestHeaders = config.headers;
+    var responseType = config.responseType;
 
     if (utils.isFormData(requestData)) {
       delete requestHeaders['Content-Type']; // Let the browser set it
@@ -64,23 +65,14 @@ module.exports = function xhrAdapter(config) {
     // Set the request timeout in MS
     request.timeout = config.timeout;
 
-    // Listen for ready state
-    request.onreadystatechange = function handleLoad() {
-      if (!request || request.readyState !== 4) {
+    function onloadend() {
+      if (!request) {
         return;
       }
-
-      // The request errored out and we didn't get a response, this will be
-      // handled by onerror instead
-      // With one exception: request that using file: protocol, most browsers
-      // will return status as 0 even though it's a successful request
-      if (request.status === 0 && !(request.responseURL && request.responseURL.indexOf('file:') === 0)) {
-        return;
-      }
-
       // Prepare the response
       var responseHeaders = 'getAllResponseHeaders' in request ? parseHeaders(request.getAllResponseHeaders()) : null;
-      var responseData = !config.responseType || config.responseType === 'text' ? request.responseText : request.response;
+      var responseData = !responseType || responseType === 'text' ||  responseType === 'json' ?
+        request.responseText : request.response;
       var response = {
         data: responseData,
         status: request.status,
@@ -94,7 +86,30 @@ module.exports = function xhrAdapter(config) {
 
       // Clean up request
       request = null;
-    };
+    }
+
+    if ('onloadend' in request) {
+      // Use onloadend if available
+      request.onloadend = onloadend;
+    } else {
+      // Listen for ready state to emulate onloadend
+      request.onreadystatechange = function handleLoad() {
+        if (!request || request.readyState !== 4) {
+          return;
+        }
+
+        // The request errored out and we didn't get a response, this will be
+        // handled by onerror instead
+        // With one exception: request that using file: protocol, most browsers
+        // will return status as 0 even though it's a successful request
+        if (request.status === 0 && !(request.responseURL && request.responseURL.indexOf('file:') === 0)) {
+          return;
+        }
+        // readystate handler is calling before onerror or ontimeout handlers,
+        // so we should call onloadend on the next 'tick'
+        setTimeout(onloadend);
+      };
+    }
 
     // Handle browser request cancellation (as opposed to a manual cancellation)
     request.onabort = function handleAbort() {
@@ -124,7 +139,10 @@ module.exports = function xhrAdapter(config) {
       if (config.timeoutErrorMessage) {
         timeoutErrorMessage = config.timeoutErrorMessage;
       }
-      reject(createError(timeoutErrorMessage, config, 'ECONNABORTED',
+      reject(createError(
+        timeoutErrorMessage,
+        config,
+        config.transitional && config.transitional.clarifyTimeoutError ? 'ETIMEDOUT' : 'ECONNABORTED',
         request));
 
       // Clean up request
@@ -164,16 +182,8 @@ module.exports = function xhrAdapter(config) {
     }
 
     // Add responseType to request if needed
-    if (config.responseType) {
-      try {
-        request.responseType = config.responseType;
-      } catch (e) {
-        // Expected DOMException thrown by browsers not compatible XMLHttpRequest Level 2.
-        // But, this can be suppressed for 'json' type as it can be parsed by default 'transformResponse' function.
-        if (config.responseType !== 'json') {
-          throw e;
-        }
-      }
+    if (responseType && responseType !== 'json') {
+      request.responseType = config.responseType;
     }
 
     // Handle progress if needed
@@ -407,7 +417,9 @@ var buildURL = __webpack_require__(/*! ../helpers/buildURL */ "./node_modules/ax
 var InterceptorManager = __webpack_require__(/*! ./InterceptorManager */ "./node_modules/axios/lib/core/InterceptorManager.js");
 var dispatchRequest = __webpack_require__(/*! ./dispatchRequest */ "./node_modules/axios/lib/core/dispatchRequest.js");
 var mergeConfig = __webpack_require__(/*! ./mergeConfig */ "./node_modules/axios/lib/core/mergeConfig.js");
+var validator = __webpack_require__(/*! ../helpers/validator */ "./node_modules/axios/lib/helpers/validator.js");
 
+var validators = validator.validators;
 /**
  * Create a new instance of Axios
  *
@@ -447,20 +459,71 @@ Axios.prototype.request = function request(config) {
     config.method = 'get';
   }
 
-  // Hook up interceptors middleware
-  var chain = [dispatchRequest, undefined];
-  var promise = Promise.resolve(config);
+  var transitional = config.transitional;
 
+  if (transitional !== undefined) {
+    validator.assertOptions(transitional, {
+      silentJSONParsing: validators.transitional(validators.boolean, '1.0.0'),
+      forcedJSONParsing: validators.transitional(validators.boolean, '1.0.0'),
+      clarifyTimeoutError: validators.transitional(validators.boolean, '1.0.0')
+    }, false);
+  }
+
+  // filter out skipped interceptors
+  var requestInterceptorChain = [];
+  var synchronousRequestInterceptors = true;
   this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
-    chain.unshift(interceptor.fulfilled, interceptor.rejected);
+    if (typeof interceptor.runWhen === 'function' && interceptor.runWhen(config) === false) {
+      return;
+    }
+
+    synchronousRequestInterceptors = synchronousRequestInterceptors && interceptor.synchronous;
+
+    requestInterceptorChain.unshift(interceptor.fulfilled, interceptor.rejected);
   });
 
+  var responseInterceptorChain = [];
   this.interceptors.response.forEach(function pushResponseInterceptors(interceptor) {
-    chain.push(interceptor.fulfilled, interceptor.rejected);
+    responseInterceptorChain.push(interceptor.fulfilled, interceptor.rejected);
   });
 
-  while (chain.length) {
-    promise = promise.then(chain.shift(), chain.shift());
+  var promise;
+
+  if (!synchronousRequestInterceptors) {
+    var chain = [dispatchRequest, undefined];
+
+    Array.prototype.unshift.apply(chain, requestInterceptorChain);
+    chain = chain.concat(responseInterceptorChain);
+
+    promise = Promise.resolve(config);
+    while (chain.length) {
+      promise = promise.then(chain.shift(), chain.shift());
+    }
+
+    return promise;
+  }
+
+
+  var newConfig = config;
+  while (requestInterceptorChain.length) {
+    var onFulfilled = requestInterceptorChain.shift();
+    var onRejected = requestInterceptorChain.shift();
+    try {
+      newConfig = onFulfilled(newConfig);
+    } catch (error) {
+      onRejected(error);
+      break;
+    }
+  }
+
+  try {
+    promise = dispatchRequest(newConfig);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+
+  while (responseInterceptorChain.length) {
+    promise = promise.then(responseInterceptorChain.shift(), responseInterceptorChain.shift());
   }
 
   return promise;
@@ -522,10 +585,12 @@ function InterceptorManager() {
  *
  * @return {Number} An ID used to remove interceptor later
  */
-InterceptorManager.prototype.use = function use(fulfilled, rejected) {
+InterceptorManager.prototype.use = function use(fulfilled, rejected, options) {
   this.handlers.push({
     fulfilled: fulfilled,
-    rejected: rejected
+    rejected: rejected,
+    synchronous: options ? options.synchronous : false,
+    runWhen: options ? options.runWhen : null
   });
   return this.handlers.length - 1;
 };
@@ -658,7 +723,8 @@ module.exports = function dispatchRequest(config) {
   config.headers = config.headers || {};
 
   // Transform request data
-  config.data = transformData(
+  config.data = transformData.call(
+    config,
     config.data,
     config.headers,
     config.transformRequest
@@ -684,7 +750,8 @@ module.exports = function dispatchRequest(config) {
     throwIfCancellationRequested(config);
 
     // Transform response data
-    response.data = transformData(
+    response.data = transformData.call(
+      config,
       response.data,
       response.headers,
       config.transformResponse
@@ -697,7 +764,8 @@ module.exports = function dispatchRequest(config) {
 
       // Transform response data
       if (reason && reason.response) {
-        reason.response.data = transformData(
+        reason.response.data = transformData.call(
+          config,
           reason.response.data,
           reason.response.headers,
           config.transformResponse
@@ -909,6 +977,7 @@ module.exports = function settle(resolve, reject, response) {
 
 
 var utils = __webpack_require__(/*! ./../utils */ "./node_modules/axios/lib/utils.js");
+var defaults = __webpack_require__(/*! ./../defaults */ "./node_modules/axios/lib/defaults.js");
 
 /**
  * Transform the data for a request or a response
@@ -919,9 +988,10 @@ var utils = __webpack_require__(/*! ./../utils */ "./node_modules/axios/lib/util
  * @returns {*} The resulting transformed data
  */
 module.exports = function transformData(data, headers, fns) {
+  var context = this || defaults;
   /*eslint no-param-reassign:0*/
   utils.forEach(fns, function transform(fn) {
-    data = fn(data, headers);
+    data = fn.call(context, data, headers);
   });
 
   return data;
@@ -942,6 +1012,7 @@ module.exports = function transformData(data, headers, fns) {
 
 var utils = __webpack_require__(/*! ./utils */ "./node_modules/axios/lib/utils.js");
 var normalizeHeaderName = __webpack_require__(/*! ./helpers/normalizeHeaderName */ "./node_modules/axios/lib/helpers/normalizeHeaderName.js");
+var enhanceError = __webpack_require__(/*! ./core/enhanceError */ "./node_modules/axios/lib/core/enhanceError.js");
 
 var DEFAULT_CONTENT_TYPE = {
   'Content-Type': 'application/x-www-form-urlencoded'
@@ -965,12 +1036,35 @@ function getDefaultAdapter() {
   return adapter;
 }
 
+function stringifySafely(rawValue, parser, encoder) {
+  if (utils.isString(rawValue)) {
+    try {
+      (parser || JSON.parse)(rawValue);
+      return utils.trim(rawValue);
+    } catch (e) {
+      if (e.name !== 'SyntaxError') {
+        throw e;
+      }
+    }
+  }
+
+  return (encoder || JSON.stringify)(rawValue);
+}
+
 var defaults = {
+
+  transitional: {
+    silentJSONParsing: true,
+    forcedJSONParsing: true,
+    clarifyTimeoutError: false
+  },
+
   adapter: getDefaultAdapter(),
 
   transformRequest: [function transformRequest(data, headers) {
     normalizeHeaderName(headers, 'Accept');
     normalizeHeaderName(headers, 'Content-Type');
+
     if (utils.isFormData(data) ||
       utils.isArrayBuffer(data) ||
       utils.isBuffer(data) ||
@@ -987,20 +1081,32 @@ var defaults = {
       setContentTypeIfUnset(headers, 'application/x-www-form-urlencoded;charset=utf-8');
       return data.toString();
     }
-    if (utils.isObject(data)) {
-      setContentTypeIfUnset(headers, 'application/json;charset=utf-8');
-      return JSON.stringify(data);
+    if (utils.isObject(data) || (headers && headers['Content-Type'] === 'application/json')) {
+      setContentTypeIfUnset(headers, 'application/json');
+      return stringifySafely(data);
     }
     return data;
   }],
 
   transformResponse: [function transformResponse(data) {
-    /*eslint no-param-reassign:0*/
-    if (typeof data === 'string') {
+    var transitional = this.transitional;
+    var silentJSONParsing = transitional && transitional.silentJSONParsing;
+    var forcedJSONParsing = transitional && transitional.forcedJSONParsing;
+    var strictJSONParsing = !silentJSONParsing && this.responseType === 'json';
+
+    if (strictJSONParsing || (forcedJSONParsing && utils.isString(data) && data.length)) {
       try {
-        data = JSON.parse(data);
-      } catch (e) { /* Ignore */ }
+        return JSON.parse(data);
+      } catch (e) {
+        if (strictJSONParsing) {
+          if (e.name === 'SyntaxError') {
+            throw enhanceError(e, this, 'E_JSON_PARSE');
+          }
+          throw e;
+        }
+      }
     }
+
     return data;
   }],
 
@@ -1483,6 +1589,122 @@ module.exports = function spread(callback) {
 
 /***/ }),
 
+/***/ "./node_modules/axios/lib/helpers/validator.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/axios/lib/helpers/validator.js ***!
+  \*****************************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var pkg = __webpack_require__(/*! ./../../package.json */ "./node_modules/axios/package.json");
+
+var validators = {};
+
+// eslint-disable-next-line func-names
+['object', 'boolean', 'number', 'function', 'string', 'symbol'].forEach(function(type, i) {
+  validators[type] = function validator(thing) {
+    return typeof thing === type || 'a' + (i < 1 ? 'n ' : ' ') + type;
+  };
+});
+
+var deprecatedWarnings = {};
+var currentVerArr = pkg.version.split('.');
+
+/**
+ * Compare package versions
+ * @param {string} version
+ * @param {string?} thanVersion
+ * @returns {boolean}
+ */
+function isOlderVersion(version, thanVersion) {
+  var pkgVersionArr = thanVersion ? thanVersion.split('.') : currentVerArr;
+  var destVer = version.split('.');
+  for (var i = 0; i < 3; i++) {
+    if (pkgVersionArr[i] > destVer[i]) {
+      return true;
+    } else if (pkgVersionArr[i] < destVer[i]) {
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * Transitional option validator
+ * @param {function|boolean?} validator
+ * @param {string?} version
+ * @param {string} message
+ * @returns {function}
+ */
+validators.transitional = function transitional(validator, version, message) {
+  var isDeprecated = version && isOlderVersion(version);
+
+  function formatMessage(opt, desc) {
+    return '[Axios v' + pkg.version + '] Transitional option \'' + opt + '\'' + desc + (message ? '. ' + message : '');
+  }
+
+  // eslint-disable-next-line func-names
+  return function(value, opt, opts) {
+    if (validator === false) {
+      throw new Error(formatMessage(opt, ' has been removed in ' + version));
+    }
+
+    if (isDeprecated && !deprecatedWarnings[opt]) {
+      deprecatedWarnings[opt] = true;
+      // eslint-disable-next-line no-console
+      console.warn(
+        formatMessage(
+          opt,
+          ' has been deprecated since v' + version + ' and will be removed in the near future'
+        )
+      );
+    }
+
+    return validator ? validator(value, opt, opts) : true;
+  };
+};
+
+/**
+ * Assert object's properties type
+ * @param {object} options
+ * @param {object} schema
+ * @param {boolean?} allowUnknown
+ */
+
+function assertOptions(options, schema, allowUnknown) {
+  if (typeof options !== 'object') {
+    throw new TypeError('options must be an object');
+  }
+  var keys = Object.keys(options);
+  var i = keys.length;
+  while (i-- > 0) {
+    var opt = keys[i];
+    var validator = schema[opt];
+    if (validator) {
+      var value = options[opt];
+      var result = value === undefined || validator(value, opt, options);
+      if (result !== true) {
+        throw new TypeError('option ' + opt + ' must be ' + result);
+      }
+      continue;
+    }
+    if (allowUnknown !== true) {
+      throw Error('Unknown option ' + opt);
+    }
+  }
+}
+
+module.exports = {
+  isOlderVersion: isOlderVersion,
+  assertOptions: assertOptions,
+  validators: validators
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/axios/lib/utils.js":
 /*!*****************************************!*\
   !*** ./node_modules/axios/lib/utils.js ***!
@@ -1493,8 +1715,6 @@ module.exports = function spread(callback) {
 
 
 var bind = __webpack_require__(/*! ./helpers/bind */ "./node_modules/axios/lib/helpers/bind.js");
-
-/*global toString:true*/
 
 // utils is a library of generic helper functions non-specific to axios
 
@@ -1679,7 +1899,7 @@ function isURLSearchParams(val) {
  * @returns {String} The String freed of excess whitespace
  */
 function trim(str) {
-  return str.replace(/^\s*/, '').replace(/\s*$/, '');
+  return str.trim ? str.trim() : str.replace(/^\s+|\s+$/g, '');
 }
 
 /**
@@ -8087,7 +8307,101 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _components_TopNavigationBar_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/TopNavigationBar.vue */ "./vue/components/TopNavigationBar.vue");
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+/* harmony import */ var _components_TopNavigationBar_vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/components/TopNavigationBar.vue */ "./vue/components/TopNavigationBar.vue");
+/* harmony import */ var _views_pharma_components_PharmaSidebar_vue__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/views/pharma/components/PharmaSidebar.vue */ "./vue/views/pharma/components/PharmaSidebar.vue");
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'PagePharmaHome',
+  components: {
+    PharmaSidebar: _views_pharma_components_PharmaSidebar_vue__WEBPACK_IMPORTED_MODULE_2__.default,
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__.default,
+    TopNavigationBar: _components_TopNavigationBar_vue__WEBPACK_IMPORTED_MODULE_1__.default
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/PagePharmaStats.vue?vue&type=script&lang=js&":
+/*!***************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/PagePharmaStats.vue?vue&type=script&lang=js& ***!
+  \***************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'PagePharmaStats',
+  components: {
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__.default
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/components/PharmaSidebar.vue?vue&type=script&lang=js&":
+/*!************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/components/PharmaSidebar.vue?vue&type=script&lang=js& ***!
+  \************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+//
 //
 //
 //
@@ -8113,9 +8427,336 @@ __webpack_require__.r(__webpack_exports__);
 //
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
-  name: 'PagePharmaHome',
+  name: 'PharmaSidebar',
   components: {
-    TopNavigationBar: _components_TopNavigationBar_vue__WEBPACK_IMPORTED_MODULE_0__.default
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__.default
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=script&lang=js&":
+/*!*****************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=script&lang=js& ***!
+  \*****************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/regenerator */ "./node_modules/@babel/runtime/regenerator/index.js");
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/assets/libs/bs-dialog.js */ "./vue/assets/libs/bs-dialog.js");
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+
+
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'PageAddDrug',
+  components: {
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_2__.default
+  },
+  data: function data() {
+    return {
+      formSaveDrug: {
+        drug_name: '',
+        generic_name: '',
+        brand_name: ''
+      }
+    };
+  },
+  computed: {//
+  },
+  mounted: function mounted() {//
+  },
+  methods: {
+    onSave: function onSave() {
+      var _this = this;
+
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee() {
+        var response;
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee$(_context) {
+          while (1) {
+            switch (_context.prev = _context.next) {
+              case 0:
+                _context.prev = 0;
+                _context.next = 3;
+                return _this.$store.dispatch('pharmacyDrugs/create', _this.formSaveDrug);
+
+              case 3:
+                response = _context.sent;
+                console.log(response.data.payload);
+                _context.next = 10;
+                break;
+
+              case 7:
+                _context.prev = 7;
+                _context.t0 = _context["catch"](0);
+                (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.errorDialog)({
+                  message: 'Failed to save the drug details'
+                });
+
+              case 10:
+              case "end":
+                return _context.stop();
+            }
+          }
+        }, _callee, null, [[0, 7]]);
+      }))();
+    }
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=script&lang=js&":
+/*!******************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=script&lang=js& ***!
+  \******************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'PageEditDrug',
+  components: {
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__.default
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=script&lang=js&":
+/*!**********************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=script&lang=js& ***!
+  \**********************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'PageViewAllDrugs',
+  components: {
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__.default
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageAddTag.vue?vue&type=script&lang=js&":
+/*!***************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageAddTag.vue?vue&type=script&lang=js& ***!
+  \***************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'PageAddTag',
+  components: {
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__.default
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=script&lang=js&":
+/*!********************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=script&lang=js& ***!
+  \********************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'PageViewAllTags',
+  components: {
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__.default
   }
 });
 
@@ -10753,16 +11394,57 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "pharmaRoutes": () => (/* binding */ pharmaRoutes)
 /* harmony export */ });
-/* harmony import */ var _views_pharma_PagePharmaHome_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/views/pharma/PagePharmaHome.vue */ "./vue/views/pharma/PagePharmaHome.vue");
+/* harmony import */ var _views_pharma_drugs_PageAddDrug_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/views/pharma/drugs/PageAddDrug.vue */ "./vue/views/pharma/drugs/PageAddDrug.vue");
+/* harmony import */ var _views_pharma_drugs_PageEditDrug_vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/views/pharma/drugs/PageEditDrug.vue */ "./vue/views/pharma/drugs/PageEditDrug.vue");
+/* harmony import */ var _views_pharma_drugs_PageViewAllDrugs_vue__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/views/pharma/drugs/PageViewAllDrugs.vue */ "./vue/views/pharma/drugs/PageViewAllDrugs.vue");
+/* harmony import */ var _views_pharma_PagePharmaHome_vue__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/views/pharma/PagePharmaHome.vue */ "./vue/views/pharma/PagePharmaHome.vue");
+/* harmony import */ var _views_pharma_PagePharmaStats_vue__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/views/pharma/PagePharmaStats.vue */ "./vue/views/pharma/PagePharmaStats.vue");
+/* harmony import */ var _views_pharma_tags_PageAddTag_vue__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @/views/pharma/tags/PageAddTag.vue */ "./vue/views/pharma/tags/PageAddTag.vue");
+/* harmony import */ var _views_pharma_tags_PageViewAllTags_vue__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/views/pharma/tags/PageViewAllTags.vue */ "./vue/views/pharma/tags/PageViewAllTags.vue");
+
+
+
+
+
+
 
 var pharmaRoutes = [{
   path: '/pharmacy',
   name: 'PagePharmaHome',
-  component: _views_pharma_PagePharmaHome_vue__WEBPACK_IMPORTED_MODULE_0__.default,
+  component: _views_pharma_PagePharmaHome_vue__WEBPACK_IMPORTED_MODULE_3__.default,
   meta: {
     requiresAuth: true,
     hasAccess: ['ADMIN', 'PHARMACIST']
-  }
+  },
+  children: [{
+    path: '/',
+    name: 'PagePharmaStats',
+    component: _views_pharma_PagePharmaStats_vue__WEBPACK_IMPORTED_MODULE_4__.default
+  },
+  /* drugs pages */
+  {
+    path: '/drugs',
+    name: 'PageViewAllDrugs',
+    component: _views_pharma_drugs_PageViewAllDrugs_vue__WEBPACK_IMPORTED_MODULE_2__.default
+  }, {
+    path: '/drugs/add',
+    name: 'PageAddDrug',
+    component: _views_pharma_drugs_PageAddDrug_vue__WEBPACK_IMPORTED_MODULE_0__.default
+  }, {
+    path: '/drugs/edit/:id',
+    name: 'PageEditDrug',
+    component: _views_pharma_drugs_PageEditDrug_vue__WEBPACK_IMPORTED_MODULE_1__.default
+  },
+  /* tags pages */
+  {
+    path: '/tags',
+    name: 'PageViewAllTags',
+    component: _views_pharma_tags_PageViewAllTags_vue__WEBPACK_IMPORTED_MODULE_6__.default
+  }, {
+    path: '/tags/add',
+    name: 'PageAddTag',
+    component: _views_pharma_tags_PageAddTag_vue__WEBPACK_IMPORTED_MODULE_5__.default
+  }]
 }];
 
 /***/ }),
@@ -10953,16 +11635,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _store_modules_clinic_appointments_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/store/modules/clinic_appointments.js */ "./vue/store/modules/clinic_appointments.js");
 /* harmony import */ var _store_modules_clinic_patients__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/store/modules/clinic_patients */ "./vue/store/modules/clinic_patients.js");
-/* harmony import */ var _store_modules_public_patient_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/store/modules/public_patient.js */ "./vue/store/modules/public_patient.js");
-/* harmony import */ var _store_modules_speciality_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/store/modules/speciality.js */ "./vue/store/modules/speciality.js");
-/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.esm.js");
-/* harmony import */ var vuex__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! vuex */ "./node_modules/vuex/dist/vuex.esm.js");
-/* harmony import */ var _modules_auth__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./modules/auth */ "./vue/store/modules/auth.js");
-/* harmony import */ var _modules_clinic_visits__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./modules/clinic_visits */ "./vue/store/modules/clinic_visits.js");
-/* harmony import */ var _modules_clinics__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./modules/clinics */ "./vue/store/modules/clinics.js");
-/* harmony import */ var _modules_doctors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./modules/doctors */ "./vue/store/modules/doctors.js");
-/* harmony import */ var _modules_patients__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./modules/patients */ "./vue/store/modules/patients.js");
-/* harmony import */ var _modules_users__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./modules/users */ "./vue/store/modules/users.js");
+/* harmony import */ var _store_modules_pharmacy_drugs_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/store/modules/pharmacy_drugs.js */ "./vue/store/modules/pharmacy_drugs.js");
+/* harmony import */ var _store_modules_public_patient_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/store/modules/public_patient.js */ "./vue/store/modules/public_patient.js");
+/* harmony import */ var _store_modules_speciality_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/store/modules/speciality.js */ "./vue/store/modules/speciality.js");
+/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.esm.js");
+/* harmony import */ var vuex__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! vuex */ "./node_modules/vuex/dist/vuex.esm.js");
+/* harmony import */ var _modules_auth__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./modules/auth */ "./vue/store/modules/auth.js");
+/* harmony import */ var _modules_clinic_visits__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./modules/clinic_visits */ "./vue/store/modules/clinic_visits.js");
+/* harmony import */ var _modules_clinics__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./modules/clinics */ "./vue/store/modules/clinics.js");
+/* harmony import */ var _modules_doctors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./modules/doctors */ "./vue/store/modules/doctors.js");
+/* harmony import */ var _modules_patients__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./modules/patients */ "./vue/store/modules/patients.js");
+/* harmony import */ var _modules_users__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./modules/users */ "./vue/store/modules/users.js");
 
 
 
@@ -10975,23 +11658,25 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-vue__WEBPACK_IMPORTED_MODULE_10__.default.use(vuex__WEBPACK_IMPORTED_MODULE_11__.default);
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (new vuex__WEBPACK_IMPORTED_MODULE_11__.default.Store({
+
+vue__WEBPACK_IMPORTED_MODULE_11__.default.use(vuex__WEBPACK_IMPORTED_MODULE_12__.default);
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (new vuex__WEBPACK_IMPORTED_MODULE_12__.default.Store({
   namespaced: true,
   state: {},
   mutations: {},
   actions: {},
   modules: {
-    auth: _modules_auth__WEBPACK_IMPORTED_MODULE_4__.authStore,
-    publicPatient: _store_modules_public_patient_js__WEBPACK_IMPORTED_MODULE_2__.publicPatientStore,
-    users: _modules_users__WEBPACK_IMPORTED_MODULE_9__.usersStore,
-    doctors: _modules_doctors__WEBPACK_IMPORTED_MODULE_7__.doctorsStore,
-    specialities: _store_modules_speciality_js__WEBPACK_IMPORTED_MODULE_3__.specialityStore,
-    patients: _modules_patients__WEBPACK_IMPORTED_MODULE_8__.patientsStore,
-    clinics: _modules_clinics__WEBPACK_IMPORTED_MODULE_6__.clinicsStore,
-    clinicVisits: _modules_clinic_visits__WEBPACK_IMPORTED_MODULE_5__.clinicVisitsStore,
+    auth: _modules_auth__WEBPACK_IMPORTED_MODULE_5__.authStore,
+    publicPatient: _store_modules_public_patient_js__WEBPACK_IMPORTED_MODULE_3__.publicPatientStore,
+    users: _modules_users__WEBPACK_IMPORTED_MODULE_10__.usersStore,
+    doctors: _modules_doctors__WEBPACK_IMPORTED_MODULE_8__.doctorsStore,
+    specialities: _store_modules_speciality_js__WEBPACK_IMPORTED_MODULE_4__.specialityStore,
+    patients: _modules_patients__WEBPACK_IMPORTED_MODULE_9__.patientsStore,
+    clinics: _modules_clinics__WEBPACK_IMPORTED_MODULE_7__.clinicsStore,
+    clinicVisits: _modules_clinic_visits__WEBPACK_IMPORTED_MODULE_6__.clinicVisitsStore,
     clinicPatients: _store_modules_clinic_patients__WEBPACK_IMPORTED_MODULE_1__.clinicPatientsStore,
-    clinicAppointments: _store_modules_clinic_appointments_js__WEBPACK_IMPORTED_MODULE_0__.clinicAppointmentsStore
+    clinicAppointments: _store_modules_clinic_appointments_js__WEBPACK_IMPORTED_MODULE_0__.clinicAppointmentsStore,
+    pharmacyDrugs: _store_modules_pharmacy_drugs_js__WEBPACK_IMPORTED_MODULE_2__.pharmacyDrugsStore
   }
 }));
 
@@ -12203,6 +12888,139 @@ var patientsStore = {
             }
           }
         }, _callee5);
+      }))();
+    }
+  }
+};
+
+/***/ }),
+
+/***/ "./vue/store/modules/pharmacy_drugs.js":
+/*!*********************************************!*\
+  !*** ./vue/store/modules/pharmacy_drugs.js ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "pharmacyDrugsStore": () => (/* binding */ pharmacyDrugsStore)
+/* harmony export */ });
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/regenerator */ "./node_modules/@babel/runtime/regenerator/index.js");
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! axios */ "./node_modules/axios/index.js");
+/* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(axios__WEBPACK_IMPORTED_MODULE_1__);
+
+
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
+
+var pharmacyDrugsStore = {
+  namespaced: true,
+  state: function state() {
+    return {};
+  },
+  getters: {},
+  mutations: {},
+  actions: {
+    fetch: function fetch(context, id) {
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee() {
+        var response;
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee$(_context) {
+          while (1) {
+            switch (_context.prev = _context.next) {
+              case 0:
+                _context.next = 2;
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/get.php', {
+                  id: id
+                });
+
+              case 2:
+                response = _context.sent;
+                return _context.abrupt("return", response.data.payload.data);
+
+              case 4:
+              case "end":
+                return _context.stop();
+            }
+          }
+        }, _callee);
+      }))();
+    },
+    fetchAll: function fetchAll(context) {
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee2() {
+        var response;
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee2$(_context2) {
+          while (1) {
+            switch (_context2.prev = _context2.next) {
+              case 0:
+                _context2.next = 2;
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/all.php');
+
+              case 2:
+                response = _context2.sent;
+                return _context2.abrupt("return", response.data.payload);
+
+              case 4:
+              case "end":
+                return _context2.stop();
+            }
+          }
+        }, _callee2);
+      }))();
+    },
+
+    /**
+     *
+     * @param context
+     * @param params [drug_name, generic_name, brand_name]
+     */
+    create: function create(context, params) {
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee3() {
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee3$(_context3) {
+          while (1) {
+            switch (_context3.prev = _context3.next) {
+              case 0:
+                _context3.next = 2;
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/create.php', params);
+
+              case 2:
+                return _context3.abrupt("return", _context3.sent);
+
+              case 3:
+              case "end":
+                return _context3.stop();
+            }
+          }
+        }, _callee3);
+      }))();
+    },
+
+    /**
+     *
+     * @param context
+     * @param params [id, drug_name, generic_name, brand_name]
+     */
+    update: function update(context, params) {
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee4() {
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee4$(_context4) {
+          while (1) {
+            switch (_context4.prev = _context4.next) {
+              case 0:
+                _context4.next = 2;
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/update.php', params);
+
+              case 2:
+                return _context4.abrupt("return", _context4.sent);
+
+              case 3:
+              case "end":
+                return _context4.stop();
+            }
+          }
+        }, _callee4);
       }))();
     }
   }
@@ -36976,7 +37794,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_laravel_mix_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_0___default()(function(i){return i[1]});
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, ".daterangepicker {\n  position: absolute;\n  color: inherit;\n  background-color: #fff;\n  border-radius: 4px;\n  border: 1px solid #ddd;\n  width: 278px;\n  max-width: none;\n  padding: 0;\n  margin-top: 7px;\n  top: 100px;\n  left: 20px;\n  z-index: 3001;\n  display: none;\n  font-family: arial;\n  font-size: 15px;\n  line-height: 1em;\n}\n\n.daterangepicker:before, .daterangepicker:after {\n  position: absolute;\n  display: inline-block;\n  border-bottom-color: rgba(0, 0, 0, 0.2);\n  content: '';\n}\n\n.daterangepicker:before {\n  top: -7px;\n  border-right: 7px solid transparent;\n  border-left: 7px solid transparent;\n  border-bottom: 7px solid #ccc;\n}\n\n.daterangepicker:after {\n  top: -6px;\n  border-right: 6px solid transparent;\n  border-bottom: 6px solid #fff;\n  border-left: 6px solid transparent;\n}\n\n.daterangepicker.opensleft:before {\n  right: 9px;\n}\n\n.daterangepicker.opensleft:after {\n  right: 10px;\n}\n\n.daterangepicker.openscenter:before {\n  left: 0;\n  right: 0;\n  width: 0;\n  margin-left: auto;\n  margin-right: auto;\n}\n\n.daterangepicker.openscenter:after {\n  left: 0;\n  right: 0;\n  width: 0;\n  margin-left: auto;\n  margin-right: auto;\n}\n\n.daterangepicker.opensright:before {\n  left: 9px;\n}\n\n.daterangepicker.opensright:after {\n  left: 10px;\n}\n\n.daterangepicker.drop-up {\n  margin-top: -7px;\n}\n\n.daterangepicker.drop-up:before {\n  top: initial;\n  bottom: -7px;\n  border-bottom: initial;\n  border-top: 7px solid #ccc;\n}\n\n.daterangepicker.drop-up:after {\n  top: initial;\n  bottom: -6px;\n  border-bottom: initial;\n  border-top: 6px solid #fff;\n}\n\n.daterangepicker.single .daterangepicker .ranges, .daterangepicker.single .drp-calendar {\n  float: none;\n}\n\n.daterangepicker.single .drp-selected {\n  display: none;\n}\n\n.daterangepicker.show-calendar .drp-calendar {\n  display: block;\n}\n\n.daterangepicker.show-calendar .drp-buttons {\n  display: block;\n}\n\n.daterangepicker.auto-apply .drp-buttons {\n  display: none;\n}\n\n.daterangepicker .drp-calendar {\n  display: none;\n  max-width: 270px;\n}\n\n.daterangepicker .drp-calendar.left {\n  padding: 8px 0 8px 8px;\n}\n\n.daterangepicker .drp-calendar.right {\n  padding: 8px;\n}\n\n.daterangepicker .drp-calendar.single .calendar-table {\n  border: none;\n}\n\n.daterangepicker .calendar-table .next span, .daterangepicker .calendar-table .prev span {\n  color: #fff;\n  border: solid black;\n  border-width: 0 2px 2px 0;\n  border-radius: 0;\n  display: inline-block;\n  padding: 3px;\n}\n\n.daterangepicker .calendar-table .next span {\n  transform: rotate(-45deg);\n  -webkit-transform: rotate(-45deg);\n}\n\n.daterangepicker .calendar-table .prev span {\n  transform: rotate(135deg);\n  -webkit-transform: rotate(135deg);\n}\n\n.daterangepicker .calendar-table th, .daterangepicker .calendar-table td {\n  white-space: nowrap;\n  text-align: center;\n  vertical-align: middle;\n  min-width: 32px;\n  width: 32px;\n  height: 24px;\n  line-height: 24px;\n  font-size: 12px;\n  border-radius: 4px;\n  border: 1px solid transparent;\n  white-space: nowrap;\n  cursor: pointer;\n}\n\n.daterangepicker .calendar-table {\n  border: 1px solid #fff;\n  border-radius: 4px;\n  background-color: #fff;\n}\n\n.daterangepicker .calendar-table table {\n  width: 100%;\n  margin: 0;\n  border-spacing: 0;\n  border-collapse: collapse;\n}\n\n.daterangepicker td.available:hover, .daterangepicker th.available:hover {\n  background-color: #eee;\n  border-color: transparent;\n  color: inherit;\n}\n\n.daterangepicker td.week, .daterangepicker th.week {\n  font-size: 80%;\n  color: #ccc;\n}\n\n.daterangepicker td.off, .daterangepicker td.off.in-range, .daterangepicker td.off.start-date, .daterangepicker td.off.end-date {\n  background-color: #fff;\n  border-color: transparent;\n  color: #999;\n}\n\n.daterangepicker td.in-range {\n  background-color: #ebf4f8;\n  border-color: transparent;\n  color: #000;\n  border-radius: 0;\n}\n\n.daterangepicker td.start-date {\n  border-radius: 4px 0 0 4px;\n}\n\n.daterangepicker td.end-date {\n  border-radius: 0 4px 4px 0;\n}\n\n.daterangepicker td.start-date.end-date {\n  border-radius: 4px;\n}\n\n.daterangepicker td.active, .daterangepicker td.active:hover {\n  background-color: #357ebd;\n  border-color: transparent;\n  color: #fff;\n}\n\n.daterangepicker th.month {\n  width: auto;\n}\n\n.daterangepicker td.disabled, .daterangepicker option.disabled {\n  color: #999;\n  cursor: not-allowed;\n  text-decoration: line-through;\n}\n\n.daterangepicker select.monthselect, .daterangepicker select.yearselect {\n  font-size: 12px;\n  padding: 1px;\n  height: auto;\n  margin: 0;\n  cursor: default;\n}\n\n.daterangepicker select.monthselect {\n  margin-right: 2%;\n  width: 56%;\n}\n\n.daterangepicker select.yearselect {\n  width: 40%;\n}\n\n.daterangepicker select.hourselect, .daterangepicker select.minuteselect, .daterangepicker select.secondselect, .daterangepicker select.ampmselect {\n  width: 50px;\n  margin: 0 auto;\n  background: #eee;\n  border: 1px solid #eee;\n  padding: 2px;\n  outline: 0;\n  font-size: 12px;\n}\n\n.daterangepicker .calendar-time {\n  text-align: center;\n  margin: 4px auto 0 auto;\n  line-height: 30px;\n  position: relative;\n}\n\n.daterangepicker .calendar-time select.disabled {\n  color: #ccc;\n  cursor: not-allowed;\n}\n\n.daterangepicker .drp-buttons {\n  clear: both;\n  text-align: right;\n  padding: 8px;\n  border-top: 1px solid #ddd;\n  display: none;\n  line-height: 12px;\n  vertical-align: middle;\n}\n\n.daterangepicker .drp-selected {\n  display: inline-block;\n  font-size: 12px;\n  padding-right: 8px;\n}\n\n.daterangepicker .drp-buttons .btn {\n  margin-left: 8px;\n  font-size: 12px;\n  font-weight: bold;\n  padding: 4px 8px;\n}\n\n.daterangepicker.show-ranges.single.rtl .drp-calendar.left {\n  border-right: 1px solid #ddd;\n}\n\n.daterangepicker.show-ranges.single.ltr .drp-calendar.left {\n  border-left: 1px solid #ddd;\n}\n\n.daterangepicker.show-ranges.rtl .drp-calendar.right {\n  border-right: 1px solid #ddd;\n}\n\n.daterangepicker.show-ranges.ltr .drp-calendar.left {\n  border-left: 1px solid #ddd;\n}\n\n.daterangepicker .ranges {\n  float: none;\n  text-align: left;\n  margin: 0;\n}\n\n.daterangepicker.show-calendar .ranges {\n  margin-top: 8px;\n}\n\n.daterangepicker .ranges ul {\n  list-style: none;\n  margin: 0 auto;\n  padding: 0;\n  width: 100%;\n}\n\n.daterangepicker .ranges li {\n  font-size: 12px;\n  padding: 8px 12px;\n  cursor: pointer;\n}\n\n.daterangepicker .ranges li:hover {\n  background-color: #eee;\n}\n\n.daterangepicker .ranges li.active {\n  background-color: #08c;\n  color: #fff;\n}\n\n/*  Larger Screen Styling */\n@media (min-width: 564px) {\n  .daterangepicker {\n    width: auto;\n  }\n\n  .daterangepicker .ranges ul {\n    width: 140px;\n  }\n\n  .daterangepicker.single .ranges ul {\n    width: 100%;\n  }\n\n  .daterangepicker.single .drp-calendar.left {\n    clear: none;\n  }\n\n  .daterangepicker.single .ranges, .daterangepicker.single .drp-calendar {\n    float: left;\n  }\n\n  .daterangepicker {\n    direction: ltr;\n    text-align: left;\n  }\n\n  .daterangepicker .drp-calendar.left {\n    clear: left;\n    margin-right: 0;\n  }\n\n  .daterangepicker .drp-calendar.left .calendar-table {\n    border-right: none;\n    border-top-right-radius: 0;\n    border-bottom-right-radius: 0;\n  }\n\n  .daterangepicker .drp-calendar.right {\n    margin-left: 0;\n  }\n\n  .daterangepicker .drp-calendar.right .calendar-table {\n    border-left: none;\n    border-top-left-radius: 0;\n    border-bottom-left-radius: 0;\n  }\n\n  .daterangepicker .drp-calendar.left .calendar-table {\n    padding-right: 8px;\n  }\n\n  .daterangepicker .ranges, .daterangepicker .drp-calendar {\n    float: left;\n  }\n}\n\n@media (min-width: 730px) {\n  .daterangepicker .ranges {\n    width: auto;\n  }\n\n  .daterangepicker .ranges {\n    float: left;\n  }\n\n  .daterangepicker.rtl .ranges {\n    float: right;\n  }\n\n  .daterangepicker .drp-calendar.left {\n    clear: none !important;\n  }\n}\n", ""]);
+___CSS_LOADER_EXPORT___.push([module.id, ".daterangepicker {\r\n  position: absolute;\r\n  color: inherit;\r\n  background-color: #fff;\r\n  border-radius: 4px;\r\n  border: 1px solid #ddd;\r\n  width: 278px;\r\n  max-width: none;\r\n  padding: 0;\r\n  margin-top: 7px;\r\n  top: 100px;\r\n  left: 20px;\r\n  z-index: 3001;\r\n  display: none;\r\n  font-family: arial;\r\n  font-size: 15px;\r\n  line-height: 1em;\r\n}\r\n\r\n.daterangepicker:before, .daterangepicker:after {\r\n  position: absolute;\r\n  display: inline-block;\r\n  border-bottom-color: rgba(0, 0, 0, 0.2);\r\n  content: '';\r\n}\r\n\r\n.daterangepicker:before {\r\n  top: -7px;\r\n  border-right: 7px solid transparent;\r\n  border-left: 7px solid transparent;\r\n  border-bottom: 7px solid #ccc;\r\n}\r\n\r\n.daterangepicker:after {\r\n  top: -6px;\r\n  border-right: 6px solid transparent;\r\n  border-bottom: 6px solid #fff;\r\n  border-left: 6px solid transparent;\r\n}\r\n\r\n.daterangepicker.opensleft:before {\r\n  right: 9px;\r\n}\r\n\r\n.daterangepicker.opensleft:after {\r\n  right: 10px;\r\n}\r\n\r\n.daterangepicker.openscenter:before {\r\n  left: 0;\r\n  right: 0;\r\n  width: 0;\r\n  margin-left: auto;\r\n  margin-right: auto;\r\n}\r\n\r\n.daterangepicker.openscenter:after {\r\n  left: 0;\r\n  right: 0;\r\n  width: 0;\r\n  margin-left: auto;\r\n  margin-right: auto;\r\n}\r\n\r\n.daterangepicker.opensright:before {\r\n  left: 9px;\r\n}\r\n\r\n.daterangepicker.opensright:after {\r\n  left: 10px;\r\n}\r\n\r\n.daterangepicker.drop-up {\r\n  margin-top: -7px;\r\n}\r\n\r\n.daterangepicker.drop-up:before {\r\n  top: initial;\r\n  bottom: -7px;\r\n  border-bottom: initial;\r\n  border-top: 7px solid #ccc;\r\n}\r\n\r\n.daterangepicker.drop-up:after {\r\n  top: initial;\r\n  bottom: -6px;\r\n  border-bottom: initial;\r\n  border-top: 6px solid #fff;\r\n}\r\n\r\n.daterangepicker.single .daterangepicker .ranges, .daterangepicker.single .drp-calendar {\r\n  float: none;\r\n}\r\n\r\n.daterangepicker.single .drp-selected {\r\n  display: none;\r\n}\r\n\r\n.daterangepicker.show-calendar .drp-calendar {\r\n  display: block;\r\n}\r\n\r\n.daterangepicker.show-calendar .drp-buttons {\r\n  display: block;\r\n}\r\n\r\n.daterangepicker.auto-apply .drp-buttons {\r\n  display: none;\r\n}\r\n\r\n.daterangepicker .drp-calendar {\r\n  display: none;\r\n  max-width: 270px;\r\n}\r\n\r\n.daterangepicker .drp-calendar.left {\r\n  padding: 8px 0 8px 8px;\r\n}\r\n\r\n.daterangepicker .drp-calendar.right {\r\n  padding: 8px;\r\n}\r\n\r\n.daterangepicker .drp-calendar.single .calendar-table {\r\n  border: none;\r\n}\r\n\r\n.daterangepicker .calendar-table .next span, .daterangepicker .calendar-table .prev span {\r\n  color: #fff;\r\n  border: solid black;\r\n  border-width: 0 2px 2px 0;\r\n  border-radius: 0;\r\n  display: inline-block;\r\n  padding: 3px;\r\n}\r\n\r\n.daterangepicker .calendar-table .next span {\r\n  transform: rotate(-45deg);\r\n  -webkit-transform: rotate(-45deg);\r\n}\r\n\r\n.daterangepicker .calendar-table .prev span {\r\n  transform: rotate(135deg);\r\n  -webkit-transform: rotate(135deg);\r\n}\r\n\r\n.daterangepicker .calendar-table th, .daterangepicker .calendar-table td {\r\n  white-space: nowrap;\r\n  text-align: center;\r\n  vertical-align: middle;\r\n  min-width: 32px;\r\n  width: 32px;\r\n  height: 24px;\r\n  line-height: 24px;\r\n  font-size: 12px;\r\n  border-radius: 4px;\r\n  border: 1px solid transparent;\r\n  white-space: nowrap;\r\n  cursor: pointer;\r\n}\r\n\r\n.daterangepicker .calendar-table {\r\n  border: 1px solid #fff;\r\n  border-radius: 4px;\r\n  background-color: #fff;\r\n}\r\n\r\n.daterangepicker .calendar-table table {\r\n  width: 100%;\r\n  margin: 0;\r\n  border-spacing: 0;\r\n  border-collapse: collapse;\r\n}\r\n\r\n.daterangepicker td.available:hover, .daterangepicker th.available:hover {\r\n  background-color: #eee;\r\n  border-color: transparent;\r\n  color: inherit;\r\n}\r\n\r\n.daterangepicker td.week, .daterangepicker th.week {\r\n  font-size: 80%;\r\n  color: #ccc;\r\n}\r\n\r\n.daterangepicker td.off, .daterangepicker td.off.in-range, .daterangepicker td.off.start-date, .daterangepicker td.off.end-date {\r\n  background-color: #fff;\r\n  border-color: transparent;\r\n  color: #999;\r\n}\r\n\r\n.daterangepicker td.in-range {\r\n  background-color: #ebf4f8;\r\n  border-color: transparent;\r\n  color: #000;\r\n  border-radius: 0;\r\n}\r\n\r\n.daterangepicker td.start-date {\r\n  border-radius: 4px 0 0 4px;\r\n}\r\n\r\n.daterangepicker td.end-date {\r\n  border-radius: 0 4px 4px 0;\r\n}\r\n\r\n.daterangepicker td.start-date.end-date {\r\n  border-radius: 4px;\r\n}\r\n\r\n.daterangepicker td.active, .daterangepicker td.active:hover {\r\n  background-color: #357ebd;\r\n  border-color: transparent;\r\n  color: #fff;\r\n}\r\n\r\n.daterangepicker th.month {\r\n  width: auto;\r\n}\r\n\r\n.daterangepicker td.disabled, .daterangepicker option.disabled {\r\n  color: #999;\r\n  cursor: not-allowed;\r\n  text-decoration: line-through;\r\n}\r\n\r\n.daterangepicker select.monthselect, .daterangepicker select.yearselect {\r\n  font-size: 12px;\r\n  padding: 1px;\r\n  height: auto;\r\n  margin: 0;\r\n  cursor: default;\r\n}\r\n\r\n.daterangepicker select.monthselect {\r\n  margin-right: 2%;\r\n  width: 56%;\r\n}\r\n\r\n.daterangepicker select.yearselect {\r\n  width: 40%;\r\n}\r\n\r\n.daterangepicker select.hourselect, .daterangepicker select.minuteselect, .daterangepicker select.secondselect, .daterangepicker select.ampmselect {\r\n  width: 50px;\r\n  margin: 0 auto;\r\n  background: #eee;\r\n  border: 1px solid #eee;\r\n  padding: 2px;\r\n  outline: 0;\r\n  font-size: 12px;\r\n}\r\n\r\n.daterangepicker .calendar-time {\r\n  text-align: center;\r\n  margin: 4px auto 0 auto;\r\n  line-height: 30px;\r\n  position: relative;\r\n}\r\n\r\n.daterangepicker .calendar-time select.disabled {\r\n  color: #ccc;\r\n  cursor: not-allowed;\r\n}\r\n\r\n.daterangepicker .drp-buttons {\r\n  clear: both;\r\n  text-align: right;\r\n  padding: 8px;\r\n  border-top: 1px solid #ddd;\r\n  display: none;\r\n  line-height: 12px;\r\n  vertical-align: middle;\r\n}\r\n\r\n.daterangepicker .drp-selected {\r\n  display: inline-block;\r\n  font-size: 12px;\r\n  padding-right: 8px;\r\n}\r\n\r\n.daterangepicker .drp-buttons .btn {\r\n  margin-left: 8px;\r\n  font-size: 12px;\r\n  font-weight: bold;\r\n  padding: 4px 8px;\r\n}\r\n\r\n.daterangepicker.show-ranges.single.rtl .drp-calendar.left {\r\n  border-right: 1px solid #ddd;\r\n}\r\n\r\n.daterangepicker.show-ranges.single.ltr .drp-calendar.left {\r\n  border-left: 1px solid #ddd;\r\n}\r\n\r\n.daterangepicker.show-ranges.rtl .drp-calendar.right {\r\n  border-right: 1px solid #ddd;\r\n}\r\n\r\n.daterangepicker.show-ranges.ltr .drp-calendar.left {\r\n  border-left: 1px solid #ddd;\r\n}\r\n\r\n.daterangepicker .ranges {\r\n  float: none;\r\n  text-align: left;\r\n  margin: 0;\r\n}\r\n\r\n.daterangepicker.show-calendar .ranges {\r\n  margin-top: 8px;\r\n}\r\n\r\n.daterangepicker .ranges ul {\r\n  list-style: none;\r\n  margin: 0 auto;\r\n  padding: 0;\r\n  width: 100%;\r\n}\r\n\r\n.daterangepicker .ranges li {\r\n  font-size: 12px;\r\n  padding: 8px 12px;\r\n  cursor: pointer;\r\n}\r\n\r\n.daterangepicker .ranges li:hover {\r\n  background-color: #eee;\r\n}\r\n\r\n.daterangepicker .ranges li.active {\r\n  background-color: #08c;\r\n  color: #fff;\r\n}\r\n\r\n/*  Larger Screen Styling */\r\n@media (min-width: 564px) {\r\n  .daterangepicker {\r\n    width: auto;\r\n  }\r\n\r\n  .daterangepicker .ranges ul {\r\n    width: 140px;\r\n  }\r\n\r\n  .daterangepicker.single .ranges ul {\r\n    width: 100%;\r\n  }\r\n\r\n  .daterangepicker.single .drp-calendar.left {\r\n    clear: none;\r\n  }\r\n\r\n  .daterangepicker.single .ranges, .daterangepicker.single .drp-calendar {\r\n    float: left;\r\n  }\r\n\r\n  .daterangepicker {\r\n    direction: ltr;\r\n    text-align: left;\r\n  }\r\n\r\n  .daterangepicker .drp-calendar.left {\r\n    clear: left;\r\n    margin-right: 0;\r\n  }\r\n\r\n  .daterangepicker .drp-calendar.left .calendar-table {\r\n    border-right: none;\r\n    border-top-right-radius: 0;\r\n    border-bottom-right-radius: 0;\r\n  }\r\n\r\n  .daterangepicker .drp-calendar.right {\r\n    margin-left: 0;\r\n  }\r\n\r\n  .daterangepicker .drp-calendar.right .calendar-table {\r\n    border-left: none;\r\n    border-top-left-radius: 0;\r\n    border-bottom-left-radius: 0;\r\n  }\r\n\r\n  .daterangepicker .drp-calendar.left .calendar-table {\r\n    padding-right: 8px;\r\n  }\r\n\r\n  .daterangepicker .ranges, .daterangepicker .drp-calendar {\r\n    float: left;\r\n  }\r\n}\r\n\r\n@media (min-width: 730px) {\r\n  .daterangepicker .ranges {\r\n    width: auto;\r\n  }\r\n\r\n  .daterangepicker .ranges {\r\n    float: left;\r\n  }\r\n\r\n  .daterangepicker.rtl .ranges {\r\n    float: right;\r\n  }\r\n\r\n  .daterangepicker .drp-calendar.left {\r\n    clear: none !important;\r\n  }\r\n}\r\n", ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -37000,7 +37818,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_laravel_mix_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_0___default()(function(i){return i[1]});
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, "\n#app {\n}\n\n", ""]);
+___CSS_LOADER_EXPORT___.push([module.id, "\n#app {\n}\r\n\r\n", ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -37048,7 +37866,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_laravel_mix_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_0___default()(function(i){return i[1]});
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, "\n.login-logo[data-v-450460c1] {\n  width: 150px;\n}\n\n", ""]);
+___CSS_LOADER_EXPORT___.push([module.id, "\n.login-logo[data-v-450460c1] {\r\n  width: 150px;\n}\r\n\r\n", ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -78604,6 +79422,279 @@ component.options.__file = "vue/views/pharma/PagePharmaHome.vue"
 
 /***/ }),
 
+/***/ "./vue/views/pharma/PagePharmaStats.vue":
+/*!**********************************************!*\
+  !*** ./vue/views/pharma/PagePharmaStats.vue ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _PagePharmaStats_vue_vue_type_template_id_1cb60519_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./PagePharmaStats.vue?vue&type=template&id=1cb60519&scoped=true& */ "./vue/views/pharma/PagePharmaStats.vue?vue&type=template&id=1cb60519&scoped=true&");
+/* harmony import */ var _PagePharmaStats_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PagePharmaStats.vue?vue&type=script&lang=js& */ "./vue/views/pharma/PagePharmaStats.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__.default)(
+  _PagePharmaStats_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__.default,
+  _PagePharmaStats_vue_vue_type_template_id_1cb60519_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render,
+  _PagePharmaStats_vue_vue_type_template_id_1cb60519_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  "1cb60519",
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "vue/views/pharma/PagePharmaStats.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
+
+/***/ }),
+
+/***/ "./vue/views/pharma/components/PharmaSidebar.vue":
+/*!*******************************************************!*\
+  !*** ./vue/views/pharma/components/PharmaSidebar.vue ***!
+  \*******************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _PharmaSidebar_vue_vue_type_template_id_59778210_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./PharmaSidebar.vue?vue&type=template&id=59778210&scoped=true& */ "./vue/views/pharma/components/PharmaSidebar.vue?vue&type=template&id=59778210&scoped=true&");
+/* harmony import */ var _PharmaSidebar_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PharmaSidebar.vue?vue&type=script&lang=js& */ "./vue/views/pharma/components/PharmaSidebar.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__.default)(
+  _PharmaSidebar_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__.default,
+  _PharmaSidebar_vue_vue_type_template_id_59778210_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render,
+  _PharmaSidebar_vue_vue_type_template_id_59778210_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  "59778210",
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "vue/views/pharma/components/PharmaSidebar.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
+
+/***/ }),
+
+/***/ "./vue/views/pharma/drugs/PageAddDrug.vue":
+/*!************************************************!*\
+  !*** ./vue/views/pharma/drugs/PageAddDrug.vue ***!
+  \************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _PageAddDrug_vue_vue_type_template_id_14cf5a1c_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./PageAddDrug.vue?vue&type=template&id=14cf5a1c&scoped=true& */ "./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=template&id=14cf5a1c&scoped=true&");
+/* harmony import */ var _PageAddDrug_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PageAddDrug.vue?vue&type=script&lang=js& */ "./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__.default)(
+  _PageAddDrug_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__.default,
+  _PageAddDrug_vue_vue_type_template_id_14cf5a1c_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render,
+  _PageAddDrug_vue_vue_type_template_id_14cf5a1c_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  "14cf5a1c",
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "vue/views/pharma/drugs/PageAddDrug.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
+
+/***/ }),
+
+/***/ "./vue/views/pharma/drugs/PageEditDrug.vue":
+/*!*************************************************!*\
+  !*** ./vue/views/pharma/drugs/PageEditDrug.vue ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _PageEditDrug_vue_vue_type_template_id_07e4229f_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./PageEditDrug.vue?vue&type=template&id=07e4229f&scoped=true& */ "./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=template&id=07e4229f&scoped=true&");
+/* harmony import */ var _PageEditDrug_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PageEditDrug.vue?vue&type=script&lang=js& */ "./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__.default)(
+  _PageEditDrug_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__.default,
+  _PageEditDrug_vue_vue_type_template_id_07e4229f_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render,
+  _PageEditDrug_vue_vue_type_template_id_07e4229f_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  "07e4229f",
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "vue/views/pharma/drugs/PageEditDrug.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
+
+/***/ }),
+
+/***/ "./vue/views/pharma/drugs/PageViewAllDrugs.vue":
+/*!*****************************************************!*\
+  !*** ./vue/views/pharma/drugs/PageViewAllDrugs.vue ***!
+  \*****************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _PageViewAllDrugs_vue_vue_type_template_id_394f024c_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./PageViewAllDrugs.vue?vue&type=template&id=394f024c&scoped=true& */ "./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=template&id=394f024c&scoped=true&");
+/* harmony import */ var _PageViewAllDrugs_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PageViewAllDrugs.vue?vue&type=script&lang=js& */ "./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__.default)(
+  _PageViewAllDrugs_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__.default,
+  _PageViewAllDrugs_vue_vue_type_template_id_394f024c_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render,
+  _PageViewAllDrugs_vue_vue_type_template_id_394f024c_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  "394f024c",
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "vue/views/pharma/drugs/PageViewAllDrugs.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
+
+/***/ }),
+
+/***/ "./vue/views/pharma/tags/PageAddTag.vue":
+/*!**********************************************!*\
+  !*** ./vue/views/pharma/tags/PageAddTag.vue ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _PageAddTag_vue_vue_type_template_id_bd624db8_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./PageAddTag.vue?vue&type=template&id=bd624db8&scoped=true& */ "./vue/views/pharma/tags/PageAddTag.vue?vue&type=template&id=bd624db8&scoped=true&");
+/* harmony import */ var _PageAddTag_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PageAddTag.vue?vue&type=script&lang=js& */ "./vue/views/pharma/tags/PageAddTag.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__.default)(
+  _PageAddTag_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__.default,
+  _PageAddTag_vue_vue_type_template_id_bd624db8_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render,
+  _PageAddTag_vue_vue_type_template_id_bd624db8_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  "bd624db8",
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "vue/views/pharma/tags/PageAddTag.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
+
+/***/ }),
+
+/***/ "./vue/views/pharma/tags/PageViewAllTags.vue":
+/*!***************************************************!*\
+  !*** ./vue/views/pharma/tags/PageViewAllTags.vue ***!
+  \***************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _PageViewAllTags_vue_vue_type_template_id_79fca31a_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./PageViewAllTags.vue?vue&type=template&id=79fca31a&scoped=true& */ "./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=template&id=79fca31a&scoped=true&");
+/* harmony import */ var _PageViewAllTags_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PageViewAllTags.vue?vue&type=script&lang=js& */ "./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__.default)(
+  _PageViewAllTags_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__.default,
+  _PageViewAllTags_vue_vue_type_template_id_79fca31a_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render,
+  _PageViewAllTags_vue_vue_type_template_id_79fca31a_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  "79fca31a",
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "vue/views/pharma/tags/PageViewAllTags.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
+
+/***/ }),
+
 /***/ "./vue/views/users/CreateUser.vue":
 /*!****************************************!*\
   !*** ./vue/views/users/CreateUser.vue ***!
@@ -79230,6 +80321,118 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PagePharmaHome_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PagePharmaHome.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/PagePharmaHome.vue?vue&type=script&lang=js&");
  /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PagePharmaHome_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__.default); 
+
+/***/ }),
+
+/***/ "./vue/views/pharma/PagePharmaStats.vue?vue&type=script&lang=js&":
+/*!***********************************************************************!*\
+  !*** ./vue/views/pharma/PagePharmaStats.vue?vue&type=script&lang=js& ***!
+  \***********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PagePharmaStats_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PagePharmaStats.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/PagePharmaStats.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PagePharmaStats_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__.default); 
+
+/***/ }),
+
+/***/ "./vue/views/pharma/components/PharmaSidebar.vue?vue&type=script&lang=js&":
+/*!********************************************************************************!*\
+  !*** ./vue/views/pharma/components/PharmaSidebar.vue?vue&type=script&lang=js& ***!
+  \********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PharmaSidebar_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PharmaSidebar.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/components/PharmaSidebar.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PharmaSidebar_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__.default); 
+
+/***/ }),
+
+/***/ "./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=script&lang=js&":
+/*!*************************************************************************!*\
+  !*** ./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=script&lang=js& ***!
+  \*************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddDrug_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageAddDrug.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddDrug_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__.default); 
+
+/***/ }),
+
+/***/ "./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=script&lang=js&":
+/*!**************************************************************************!*\
+  !*** ./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=script&lang=js& ***!
+  \**************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageEditDrug_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageEditDrug.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageEditDrug_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__.default); 
+
+/***/ }),
+
+/***/ "./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=script&lang=js&":
+/*!******************************************************************************!*\
+  !*** ./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=script&lang=js& ***!
+  \******************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllDrugs_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageViewAllDrugs.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllDrugs_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__.default); 
+
+/***/ }),
+
+/***/ "./vue/views/pharma/tags/PageAddTag.vue?vue&type=script&lang=js&":
+/*!***********************************************************************!*\
+  !*** ./vue/views/pharma/tags/PageAddTag.vue?vue&type=script&lang=js& ***!
+  \***********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddTag_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageAddTag.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageAddTag.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddTag_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__.default); 
+
+/***/ }),
+
+/***/ "./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=script&lang=js&":
+/*!****************************************************************************!*\
+  !*** ./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=script&lang=js& ***!
+  \****************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllTags_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageViewAllTags.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllTags_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__.default); 
 
 /***/ }),
 
@@ -79886,6 +81089,125 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PagePharmaHome_vue_vue_type_template_id_5338f655_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
 /* harmony export */ });
 /* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PagePharmaHome_vue_vue_type_template_id_5338f655_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PagePharmaHome.vue?vue&type=template&id=5338f655&scoped=true& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/PagePharmaHome.vue?vue&type=template&id=5338f655&scoped=true&");
+
+
+/***/ }),
+
+/***/ "./vue/views/pharma/PagePharmaStats.vue?vue&type=template&id=1cb60519&scoped=true&":
+/*!*****************************************************************************************!*\
+  !*** ./vue/views/pharma/PagePharmaStats.vue?vue&type=template&id=1cb60519&scoped=true& ***!
+  \*****************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PagePharmaStats_vue_vue_type_template_id_1cb60519_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PagePharmaStats_vue_vue_type_template_id_1cb60519_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PagePharmaStats_vue_vue_type_template_id_1cb60519_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PagePharmaStats.vue?vue&type=template&id=1cb60519&scoped=true& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/PagePharmaStats.vue?vue&type=template&id=1cb60519&scoped=true&");
+
+
+/***/ }),
+
+/***/ "./vue/views/pharma/components/PharmaSidebar.vue?vue&type=template&id=59778210&scoped=true&":
+/*!**************************************************************************************************!*\
+  !*** ./vue/views/pharma/components/PharmaSidebar.vue?vue&type=template&id=59778210&scoped=true& ***!
+  \**************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PharmaSidebar_vue_vue_type_template_id_59778210_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PharmaSidebar_vue_vue_type_template_id_59778210_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PharmaSidebar_vue_vue_type_template_id_59778210_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PharmaSidebar.vue?vue&type=template&id=59778210&scoped=true& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/components/PharmaSidebar.vue?vue&type=template&id=59778210&scoped=true&");
+
+
+/***/ }),
+
+/***/ "./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=template&id=14cf5a1c&scoped=true&":
+/*!*******************************************************************************************!*\
+  !*** ./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=template&id=14cf5a1c&scoped=true& ***!
+  \*******************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddDrug_vue_vue_type_template_id_14cf5a1c_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddDrug_vue_vue_type_template_id_14cf5a1c_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddDrug_vue_vue_type_template_id_14cf5a1c_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageAddDrug.vue?vue&type=template&id=14cf5a1c&scoped=true& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=template&id=14cf5a1c&scoped=true&");
+
+
+/***/ }),
+
+/***/ "./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=template&id=07e4229f&scoped=true&":
+/*!********************************************************************************************!*\
+  !*** ./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=template&id=07e4229f&scoped=true& ***!
+  \********************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageEditDrug_vue_vue_type_template_id_07e4229f_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageEditDrug_vue_vue_type_template_id_07e4229f_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageEditDrug_vue_vue_type_template_id_07e4229f_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageEditDrug.vue?vue&type=template&id=07e4229f&scoped=true& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=template&id=07e4229f&scoped=true&");
+
+
+/***/ }),
+
+/***/ "./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=template&id=394f024c&scoped=true&":
+/*!************************************************************************************************!*\
+  !*** ./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=template&id=394f024c&scoped=true& ***!
+  \************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllDrugs_vue_vue_type_template_id_394f024c_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllDrugs_vue_vue_type_template_id_394f024c_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllDrugs_vue_vue_type_template_id_394f024c_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageViewAllDrugs.vue?vue&type=template&id=394f024c&scoped=true& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=template&id=394f024c&scoped=true&");
+
+
+/***/ }),
+
+/***/ "./vue/views/pharma/tags/PageAddTag.vue?vue&type=template&id=bd624db8&scoped=true&":
+/*!*****************************************************************************************!*\
+  !*** ./vue/views/pharma/tags/PageAddTag.vue?vue&type=template&id=bd624db8&scoped=true& ***!
+  \*****************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddTag_vue_vue_type_template_id_bd624db8_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddTag_vue_vue_type_template_id_bd624db8_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageAddTag_vue_vue_type_template_id_bd624db8_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageAddTag.vue?vue&type=template&id=bd624db8&scoped=true& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageAddTag.vue?vue&type=template&id=bd624db8&scoped=true&");
+
+
+/***/ }),
+
+/***/ "./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=template&id=79fca31a&scoped=true&":
+/*!**********************************************************************************************!*\
+  !*** ./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=template&id=79fca31a&scoped=true& ***!
+  \**********************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllTags_vue_vue_type_template_id_79fca31a_scoped_true___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllTags_vue_vue_type_template_id_79fca31a_scoped_true___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_PageViewAllTags_vue_vue_type_template_id_79fca31a_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./PageViewAllTags.vue?vue&type=template&id=79fca31a&scoped=true& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=template&id=79fca31a&scoped=true&");
 
 
 /***/ }),
@@ -86671,18 +87993,566 @@ var render = function() {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  return _c("div", {}, [_c("TopNavigationBar"), _vm._v(" "), _vm._m(0)], 1)
+  return _c(
+    "div",
+    {},
+    [
+      _c("TopNavigationBar"),
+      _vm._v(" "),
+      _c("div", { staticClass: "container" }, [
+        _c("div", { staticClass: "row g-2" }, [
+          _c("div", { staticClass: "col-3" }, [_c("PharmaSidebar")], 1),
+          _vm._v(" "),
+          _c("div", { staticClass: "col" }, [_c("router-view")], 1)
+        ])
+      ])
+    ],
+    1
+  )
 }
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "container" }, [
-      _c("div", { staticClass: "row" }, [_c("div", { staticClass: "col" })])
-    ])
-  }
-]
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/PagePharmaStats.vue?vue&type=template&id=1cb60519&scoped=true&":
+/*!********************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/PagePharmaStats.vue?vue&type=template&id=1cb60519&scoped=true& ***!
+  \********************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c(
+    "div",
+    {},
+    [
+      _c("CardSection", [
+        _vm._v(
+          "\n\n    Lorem ipsum dolor sit amet, consectetur adipisicing elit. Dignissimos eaque, error esse eum expedita hic illo ipsum iste maxime necessitatibus numquam\n    obcaecati placeat possimus quasi sint tempore unde veniam voluptatem?\n\n  "
+        )
+      ])
+    ],
+    1
+  )
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/components/PharmaSidebar.vue?vue&type=template&id=59778210&scoped=true&":
+/*!*****************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/components/PharmaSidebar.vue?vue&type=template&id=59778210&scoped=true& ***!
+  \*****************************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c(
+    "div",
+    {},
+    [
+      _c("CardSection", [
+        _c(
+          "ul",
+          { staticClass: "list-group mb-3" },
+          [
+            _c(
+              "router-link",
+              { staticClass: "list-group-item", attrs: { to: "/pharmacy" } },
+              [_vm._v("Pharmacy home")]
+            )
+          ],
+          1
+        ),
+        _vm._v(" "),
+        _c(
+          "ul",
+          { staticClass: "list-group mb-3" },
+          [
+            _c(
+              "router-link",
+              { staticClass: "list-group-item", attrs: { to: "/drugs" } },
+              [
+                _c("i", { staticClass: "bi bi-grid-fill" }),
+                _vm._v(" All drugs")
+              ]
+            ),
+            _vm._v(" "),
+            _c(
+              "router-link",
+              { staticClass: "list-group-item", attrs: { to: "/drugs/add" } },
+              [
+                _c("i", { staticClass: "bi bi-plus-circle-fill" }),
+                _vm._v(" Add a drug")
+              ]
+            )
+          ],
+          1
+        ),
+        _vm._v(" "),
+        _c(
+          "ul",
+          { staticClass: "list-group mb-3" },
+          [
+            _c(
+              "router-link",
+              { staticClass: "list-group-item", attrs: { to: "/tags" } },
+              [_c("i", { staticClass: "bi bi-palette2" }), _vm._v(" All tags")]
+            ),
+            _vm._v(" "),
+            _c(
+              "router-link",
+              { staticClass: "list-group-item", attrs: { to: "/tags/add" } },
+              [
+                _c("i", { staticClass: "bi bi-plus-circle-fill" }),
+                _vm._v(" Add a tag")
+              ]
+            )
+          ],
+          1
+        )
+      ])
+    ],
+    1
+  )
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=template&id=14cf5a1c&scoped=true&":
+/*!**********************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageAddDrug.vue?vue&type=template&id=14cf5a1c&scoped=true& ***!
+  \**********************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c(
+    "div",
+    {},
+    [
+      _c(
+        "CardSection",
+        {
+          scopedSlots: _vm._u([
+            {
+              key: "header",
+              fn: function() {
+                return [_vm._v("Add a new drug")]
+              },
+              proxy: true
+            }
+          ])
+        },
+        [
+          _vm._v(" "),
+          _c("div", {}, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col" }, [
+                _c("div", { staticClass: "mb-3" }, [
+                  _c("label", { staticClass: "form-label" }, [
+                    _vm._v("Drug name")
+                  ]),
+                  _vm._v(" "),
+                  _c("input", {
+                    directives: [
+                      {
+                        name: "model",
+                        rawName: "v-model.trim",
+                        value: _vm.formSaveDrug.drug_name,
+                        expression: "formSaveDrug.drug_name",
+                        modifiers: { trim: true }
+                      }
+                    ],
+                    staticClass: "form-control",
+                    attrs: { type: "text" },
+                    domProps: { value: _vm.formSaveDrug.drug_name },
+                    on: {
+                      input: function($event) {
+                        if ($event.target.composing) {
+                          return
+                        }
+                        _vm.$set(
+                          _vm.formSaveDrug,
+                          "drug_name",
+                          $event.target.value.trim()
+                        )
+                      },
+                      blur: function($event) {
+                        return _vm.$forceUpdate()
+                      }
+                    }
+                  })
+                ])
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col" }, [
+                _c("div", { staticClass: "mb-3" }, [
+                  _c("label", { staticClass: "form-label" }, [
+                    _vm._v("Generic name")
+                  ]),
+                  _vm._v(" "),
+                  _c("input", {
+                    directives: [
+                      {
+                        name: "model",
+                        rawName: "v-model.trim",
+                        value: _vm.formSaveDrug.generic_name,
+                        expression: "formSaveDrug.generic_name",
+                        modifiers: { trim: true }
+                      }
+                    ],
+                    staticClass: "form-control",
+                    attrs: { type: "text" },
+                    domProps: { value: _vm.formSaveDrug.generic_name },
+                    on: {
+                      input: function($event) {
+                        if ($event.target.composing) {
+                          return
+                        }
+                        _vm.$set(
+                          _vm.formSaveDrug,
+                          "generic_name",
+                          $event.target.value.trim()
+                        )
+                      },
+                      blur: function($event) {
+                        return _vm.$forceUpdate()
+                      }
+                    }
+                  })
+                ])
+              ]),
+              _vm._v(" "),
+              _c("div", { staticClass: "col" }, [
+                _c("div", { staticClass: "mb-3" }, [
+                  _c("label", { staticClass: "form-label" }, [
+                    _vm._v("Brand name")
+                  ]),
+                  _vm._v(" "),
+                  _c("input", {
+                    directives: [
+                      {
+                        name: "model",
+                        rawName: "v-model.trim",
+                        value: _vm.formSaveDrug.brand_name,
+                        expression: "formSaveDrug.brand_name",
+                        modifiers: { trim: true }
+                      }
+                    ],
+                    staticClass: "form-control",
+                    attrs: { type: "text" },
+                    domProps: { value: _vm.formSaveDrug.brand_name },
+                    on: {
+                      input: function($event) {
+                        if ($event.target.composing) {
+                          return
+                        }
+                        _vm.$set(
+                          _vm.formSaveDrug,
+                          "brand_name",
+                          $event.target.value.trim()
+                        )
+                      },
+                      blur: function($event) {
+                        return _vm.$forceUpdate()
+                      }
+                    }
+                  })
+                ])
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "text-center" }, [
+              _c(
+                "button",
+                {
+                  staticClass: "btn btn-primary",
+                  on: {
+                    click: function($event) {
+                      return _vm.onSave()
+                    }
+                  }
+                },
+                [_vm._v("Save")]
+              )
+            ])
+          ])
+        ]
+      )
+    ],
+    1
+  )
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=template&id=07e4229f&scoped=true&":
+/*!***********************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageEditDrug.vue?vue&type=template&id=07e4229f&scoped=true& ***!
+  \***********************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c(
+    "div",
+    {},
+    [
+      _c(
+        "CardSection",
+        {
+          scopedSlots: _vm._u([
+            {
+              key: "header",
+              fn: function() {
+                return [_vm._v("Edit drug_name")]
+              },
+              proxy: true
+            }
+          ])
+        },
+        [
+          _vm._v(" "),
+          _c("div", {}, [
+            _c("div", {}, [
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col" }, [
+                  _c("div", { staticClass: "mb-3" }, [
+                    _c("label", { staticClass: "form-label" }, [
+                      _vm._v("Drug name")
+                    ]),
+                    _vm._v(" "),
+                    _c("input", {
+                      staticClass: "form-control",
+                      attrs: { type: "text" }
+                    })
+                  ])
+                ])
+              ]),
+              _vm._v(" "),
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col" }, [
+                  _c("div", { staticClass: "mb-3" }, [
+                    _c("label", { staticClass: "form-label" }, [
+                      _vm._v("Generic name")
+                    ]),
+                    _vm._v(" "),
+                    _c("input", {
+                      staticClass: "form-control",
+                      attrs: { type: "text" }
+                    })
+                  ])
+                ]),
+                _vm._v(" "),
+                _c("div", { staticClass: "col" }, [
+                  _c("div", { staticClass: "mb-3" }, [
+                    _c("label", { staticClass: "form-label" }, [
+                      _vm._v("Brand name")
+                    ]),
+                    _vm._v(" "),
+                    _c("input", {
+                      staticClass: "form-control",
+                      attrs: { type: "text" }
+                    })
+                  ])
+                ])
+              ]),
+              _vm._v(" "),
+              _c("div", { staticClass: "text-center" }, [
+                _c("button", { staticClass: "btn btn-primary" }, [
+                  _vm._v("Save")
+                ])
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", {})
+          ])
+        ]
+      )
+    ],
+    1
+  )
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=template&id=394f024c&scoped=true&":
+/*!***************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/drugs/PageViewAllDrugs.vue?vue&type=template&id=394f024c&scoped=true& ***!
+  \***************************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c(
+    "div",
+    {},
+    [
+      _c(
+        "CardSection",
+        {
+          scopedSlots: _vm._u([
+            {
+              key: "header",
+              fn: function() {
+                return [_vm._v("All Drugs")]
+              },
+              proxy: true
+            }
+          ])
+        },
+        [_vm._v(" "), _c("div", {})]
+      )
+    ],
+    1
+  )
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageAddTag.vue?vue&type=template&id=bd624db8&scoped=true&":
+/*!********************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageAddTag.vue?vue&type=template&id=bd624db8&scoped=true& ***!
+  \********************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c(
+    "div",
+    {},
+    [
+      _c("CardSection", {
+        scopedSlots: _vm._u([
+          {
+            key: "header",
+            fn: function() {
+              return [_vm._v("Add a tag")]
+            },
+            proxy: true
+          }
+        ])
+      })
+    ],
+    1
+  )
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=template&id=79fca31a&scoped=true&":
+/*!*************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./vue/views/pharma/tags/PageViewAllTags.vue?vue&type=template&id=79fca31a&scoped=true& ***!
+  \*************************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c(
+    "div",
+    {},
+    [
+      _c("CardSection", {
+        scopedSlots: _vm._u([
+          {
+            key: "header",
+            fn: function() {
+              return [_vm._v("All Tags")]
+            },
+            proxy: true
+          }
+        ])
+      })
+    ],
+    1
+  )
+}
+var staticRenderFns = []
 render._withStripped = true
 
 
@@ -104234,6 +106104,17 @@ var index = {
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (index);
 
 
+
+/***/ }),
+
+/***/ "./node_modules/axios/package.json":
+/*!*****************************************!*\
+  !*** ./node_modules/axios/package.json ***!
+  \*****************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = JSON.parse('{"_from":"axios@0.21.4","_id":"axios@0.21.4","_inBundle":false,"_integrity":"sha512-ut5vewkiu8jjGBdqpM44XxjuCjq9LAKeHVmoVfHVzy8eHgxxq8SbAVQNovDA8mVi05kP0Ea/n/UzcSHcTJQfNg==","_location":"/axios","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"axios@0.21.4","name":"axios","escapedName":"axios","rawSpec":"0.21.4","saveSpec":null,"fetchSpec":"0.21.4"},"_requiredBy":["#DEV:/","#USER","/localtunnel"],"_resolved":"https://registry.npmjs.org/axios/-/axios-0.21.4.tgz","_shasum":"c67b90dc0568e5c1cf2b0b858c43ba28e2eda575","_spec":"axios@0.21.4","_where":"E:\\\\laragon\\\\www\\\\smart-clinic-bit","author":{"name":"Matt Zabriskie"},"browser":{"./lib/adapters/http.js":"./lib/adapters/xhr.js"},"bugs":{"url":"https://github.com/axios/axios/issues"},"bundleDependencies":false,"bundlesize":[{"path":"./dist/axios.min.js","threshold":"5kB"}],"dependencies":{"follow-redirects":"^1.14.0"},"deprecated":false,"description":"Promise based HTTP client for the browser and node.js","devDependencies":{"coveralls":"^3.0.0","es6-promise":"^4.2.4","grunt":"^1.3.0","grunt-banner":"^0.6.0","grunt-cli":"^1.2.0","grunt-contrib-clean":"^1.1.0","grunt-contrib-watch":"^1.0.0","grunt-eslint":"^23.0.0","grunt-karma":"^4.0.0","grunt-mocha-test":"^0.13.3","grunt-ts":"^6.0.0-beta.19","grunt-webpack":"^4.0.2","istanbul-instrumenter-loader":"^1.0.0","jasmine-core":"^2.4.1","karma":"^6.3.2","karma-chrome-launcher":"^3.1.0","karma-firefox-launcher":"^2.1.0","karma-jasmine":"^1.1.1","karma-jasmine-ajax":"^0.1.13","karma-safari-launcher":"^1.0.0","karma-sauce-launcher":"^4.3.6","karma-sinon":"^1.0.5","karma-sourcemap-loader":"^0.3.8","karma-webpack":"^4.0.2","load-grunt-tasks":"^3.5.2","minimist":"^1.2.0","mocha":"^8.2.1","sinon":"^4.5.0","terser-webpack-plugin":"^4.2.3","typescript":"^4.0.5","url-search-params":"^0.10.0","webpack":"^4.44.2","webpack-dev-server":"^3.11.0"},"homepage":"https://axios-http.com","jsdelivr":"dist/axios.min.js","keywords":["xhr","http","ajax","promise","node"],"license":"MIT","main":"index.js","name":"axios","repository":{"type":"git","url":"git+https://github.com/axios/axios.git"},"scripts":{"build":"NODE_ENV=production grunt build","coveralls":"cat coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js","examples":"node ./examples/server.js","fix":"eslint --fix lib/**/*.js","postversion":"git push && git push --tags","preversion":"npm test","start":"node ./sandbox/server.js","test":"grunt test","version":"npm run build && grunt version && git add -A dist && git add CHANGELOG.md bower.json package.json"},"typings":"./index.d.ts","unpkg":"dist/axios.min.js","version":"0.21.4"}');
 
 /***/ })
 
