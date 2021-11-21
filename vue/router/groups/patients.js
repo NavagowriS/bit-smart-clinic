@@ -5,33 +5,33 @@ import PagePatientsList from '@/views/patients/PagePatientsList';
 
 export const patientsRoutes = [
     {
-        path: "/patients",
-        name: "PagePatientsList",
+        path: '/patients',
+        name: 'PagePatientsList',
         component: PagePatientsList,
         meta: {
             requiresAuth: true,
-            hasAccess: ["ADMIN", "STAFF"],
-        }
+            hasAccess: ['ADMIN', 'STAFF'],
+        },
     },
 
     {
-        path: "/patients/create",
-        name: "PagePatientCreate",
+        path: '/patients/create',
+        name: 'PagePatientCreate',
         component: PagePatientCreate,
         meta: {
             requiresAuth: true,
-            hasAccess: ["ADMIN", "STAFF"],
-        }
+            hasAccess: ['ADMIN', 'STAFF'],
+        },
     },
 
     {
-        path: "/patients/edit/:id",
-        name: "PagePatientEdit",
+        path: '/patients/edit/:id',
+        name: 'PagePatientEdit',
         component: PagePatientEdit,
         meta: {
             requiresAuth: true,
-            hasAccess: ["ADMIN", "STAFF"],
-        }
+            hasAccess: ['ADMIN', 'STAFF'],
+        },
     },
 
 ];

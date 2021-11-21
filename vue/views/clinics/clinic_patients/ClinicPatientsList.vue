@@ -5,11 +5,24 @@
     <CardSection v-if="clinicPatientsList">
       <template v-slot:header>Patients in the clinic</template>
 
+      <!-- charts -->
+      <div class="patients_charts" v-show="patientsList.length > 0">
+
+        <div class="row justify-content-end">
+          <div class="col-3">
+            <canvas id="chart_pie_patients_genders" height="150"></canvas>
+          </div>
+        </div>
+
+      </div>
+      <!-- end: charts -->
+
+
       <div class="mb-3" v-if="isSTAFF">
         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal__add_patients">Add patients</button>
       </div>
 
-      <table class="table table-bordered">
+      <table class="table table-bordered" v-if="patientsList.length > 0">
         <thead>
         <tr>
           <th>Patient</th>
@@ -33,6 +46,10 @@
         </tr>
         </tbody>
       </table>
+
+      <div class="" v-else>
+        No patents in the clinic. Start adding patients by clicking on the add patient button above.
+      </div>
 
     </CardSection>
 
@@ -89,6 +106,7 @@ import {drpDatePrompt, errorDialog} from '@/assets/libs/bs-dialog';
 import CardSection from '@/components/CardSection';
 import ModalWindow from '@/components/ModalWindow';
 import {authMixins} from '@/mixins/authMixins.js';
+import Chart from 'chart.js/auto';
 import lodash from 'lodash';
 import moment from 'moment';
 
@@ -132,6 +150,27 @@ export default {
       return this.$store.getters[ 'patients/getPatients' ];
     },
 
+    patientsStats() {
+
+      const output = {
+        genders: {
+          male: 0,
+          female: 0,
+          other: 0,
+        },
+      };
+
+      const patients = lodash.groupBy( this.patientsList, 'patient["gender"]' );
+
+      if ( patients.hasOwnProperty( 'MALE' ) ) output.genders.male = patients[ 'MALE' ].length;
+      if ( patients.hasOwnProperty( 'FEMALE' ) ) output.genders.female = patients[ 'FEMALE' ].length;
+      if ( patients.hasOwnProperty( 'OTHER' ) ) output.genders.other = patients[ 'OTHER' ].length;
+
+      return output;
+
+    },
+
+
   },
   /* ___computed___ */
 
@@ -144,6 +183,41 @@ export default {
     } catch ( e ) {
       errorDialog( { message: 'Failed to fetch clinic patients details' } );
     }
+
+    this.$nextTick( () => {
+
+      const chart = new Chart( 'chart_pie_patients_genders', {
+        type: 'doughnut',
+        data: {
+          labels: [
+            'Male',
+            'Female',
+            'Other',
+          ],
+          datasets: [{
+            data: [this.patientsStats.genders.male, this.patientsStats.genders.female, this.patientsStats.genders.other],
+            backgroundColor: [
+              'rgb(54, 162, 235)',
+              'rgb(255, 99, 132)',
+              'rgb(255, 205, 86)',
+            ],
+            hoverOffset: 4,
+          }],
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+            },
+          },
+        },
+      } );
+
+      // chart.canvas.parentNode[ 'style' ].height = '100px';
+
+
+    } );
 
   },
   /* ___mounted___ */

@@ -5,6 +5,26 @@
     <TopNavigationBar/>
 
     <div class="container">
+
+
+      <div class="row mb-3">
+        <div class="col">
+
+          <div class="d-flex gap-2">
+
+            <div class="flex-grow-1">
+              <input type="text" class=form-control placeholder="Search for patients..." v-model="searchKeyword">
+            </div>
+
+            <div class="">
+              <button class="btn btn-primary" @click="onSearchPatients()">Search</button>
+            </div>
+
+          </div>
+
+        </div>
+      </div><!-- row -->
+
       <div class="row">
 
         <div class="col">
@@ -26,13 +46,14 @@
                   <th>NIC</th>
                   <th>Address</th>
                   <th>Guardian</th>
-                  <th class="text-center">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
 
                 <tr v-for="patient in patients" :key="patient.id">
-                  <td>{{ patient.full_name }}</td>
+                  <td>
+                    <router-link :to="{name: 'PagePatientEdit', params: {id: patient.id}}">{{ patient.full_name }}</router-link>
+                  </td>
                   <td>{{ patient.gender | capitalize }}</td>
                   <td class="text-center">{{ patient.dob | dashNull }}</td>
                   <td class="text-center">{{ renderAge( patient.dob, patient.age ) }}</td>
@@ -40,11 +61,6 @@
                   <td>{{ patient.nic }}</td>
                   <td style="white-space: pre-line">{{ patient.address }}</td>
                   <td>{{ patient.guardian_name }}</td>
-                  <td class="text-center">
-                    <router-link class="btn btn-sm btn-secondary" :to="'/patients/edit/' + patient.id">
-                      <i class="bi bi-pencil-fill"></i>
-                    </router-link>
-                  </td>
                 </tr>
 
                 </tbody>
@@ -71,6 +87,7 @@
 </template>
 
 <script>
+import {errorDialog} from '@/assets/libs/bs-dialog.js';
 import CardSection from '@/components/CardSection';
 import TopNavigationBar from '@/components/TopNavigationBar';
 import moment from 'moment';
@@ -82,7 +99,11 @@ export default {
   components: { CardSection, TopNavigationBar },
 
   data() {
-    return {};
+    return {
+
+      searchKeyword: '',
+
+    };
   },
 
   computed: {
@@ -134,7 +155,23 @@ export default {
       const duration = moment.duration( diff );
 
       return Math.round( duration.asYears() );
+    }, /* renderAge */
+
+
+    async onSearchPatients() {
+
+      try {
+
+        await this.$store.dispatch( 'patients/search', this.searchKeyword );
+
+      } catch ( e ) {
+        errorDialog( {
+          message: 'Failed to fetch search result',
+        } );
+      }
+
     },
+
 
   },
 

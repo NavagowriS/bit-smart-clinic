@@ -33,6 +33,15 @@
             Book an appointment for {{ clinic.title }}
           </template>
 
+
+          <div class="mb-3">
+            <div class="alert alert-info">
+              <p>To book an appointment do the following:</p>
+              <p class="lead">1. Check the appointment date below to fetch an available token number.</p>
+              <p class="lead">2. If you are satisfied with the token number, confirming the appointment by clicking on the 'Book appointment' button.</p>
+            </div>
+          </div>
+
           <div class="" id="form_book_appointment">
 
             <div class="row g-1 justify-content-center">
@@ -57,23 +66,36 @@
 
               <div class="col-6">
 
-                <div class="" v-if="formAppointment.token_number !== 0">
-
+                <div class="" v-if="showBookingConfirm">
                   <div class="alert alert-primary text-center">
                     <p class="lead">Available token on {{ formAppointment.clinic_date }}</p>
                     <h1>{{ formAppointment.token_number }}</h1>
 
-                    <button class="btn btn-success" @click="onBookAppointment()">Book this appointment</button>
+                    <button class="btn btn-success" @click="onBookAppointment()">Book appointment</button>
 
                   </div>
+                </div><!-- booking confirm area -->
 
+              </div><!-- col -->
+            </div><!-- row -->
+
+
+            <!-- booking success status -->
+            <div class="row my-3 justify-content-center" v-if="bookingSuccessStatus">
+              <div class="col-8">
+
+                <div class="alert alert-success text-center">
+                  <p class="lead">
+                    Your appointment is booked on {{ formAppointment.clinic_date }}
+                  </p>
+                  <h1>Token Number: {{ formAppointment.token_number }}</h1>
+                  <p>
+                    Please visit the clinic on time with identification.
+                  </p>
                 </div>
 
-
-              </div>
-
-            </div>
-
+              </div><!-- col -->
+            </div><!-- row -->
 
           </div>
 
@@ -86,6 +108,7 @@
 </template>
 
 <script>
+import {errorDialog} from '@/assets/libs/bs-dialog.js';
 import CardSection from '@/components/CardSection.vue';
 import DateField from '@/components/fields/DateField.vue';
 import {showErrorDialog} from '@/helpers/common.js';
@@ -98,6 +121,9 @@ export default {
 
   data() {
     return {
+
+
+      showBookingConfirm: false,
 
       formAppointment: {
         clinic_date: moment().format( 'YYYY-MM-DD' ),
@@ -130,7 +156,21 @@ export default {
       return parseInt( this.$route.params[ 'clinicPatientId' ] );
     },
 
+    clinicDate() {
+      return this.formAppointment.clinic_date;
+    },
+
   },
+
+
+  watch: {
+
+    clinicDate() {
+      this.showBookingConfirm = false;
+    },
+
+  },
+
 
   async mounted() {
 
@@ -153,12 +193,19 @@ export default {
         const params = {
           clinic_id: this.clinic.id,
           clinic_date: this.formAppointment.clinic_date,
+          clinic_patient_id: this.clinicPatientId,
         };
 
         this.formAppointment.token_number = await this.$store.dispatch( 'publicPatient/checkAppointmentToken', params );
 
+        this.showBookingConfirm = true;
+
       } catch ( e ) {
-        console.log( e );
+
+        errorDialog( {
+          message: e.response.data.payload.error,
+        } );
+
       }
 
     },
@@ -177,12 +224,15 @@ export default {
           token_number: this.formAppointment.token_number,
         };
 
-        this.formAppointment.token_number = await this.$store.dispatch( 'publicPatient/bookAppointment', params );
+        await this.$store.dispatch( 'publicPatient/bookAppointment', params );
 
+        this.showBookingConfirm = false;
         this.bookingSuccessStatus = true;
 
       } catch ( e ) {
-        console.log( e );
+        errorDialog( {
+          message: e.response.data.payload.error,
+        } );
       }
     },
 

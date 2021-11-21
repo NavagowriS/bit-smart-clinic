@@ -40,7 +40,11 @@
         <div class="col">
 
           <CardSection>
-            <template v-slot:header>{{ clinicPatient.patient.full_name }}'s {{ clinic.title }} Details</template>
+            <template v-slot:header>
+              <router-link :to="{name: 'PagePatientEdit', params: {id: clinicPatient.patient_id}}" class="btn btn-sm btn-primary"><i
+                  class="bi bi-box-arrow-up-right"></i></router-link>
+              {{ clinicPatient.patient.full_name }}'s {{ clinic.title }} Details
+            </template>
 
             <div class="">
 

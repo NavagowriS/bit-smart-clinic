@@ -14,6 +14,7 @@ class Clinic implements IModel
 
     public ?int $id, $doctor_in_charge_id;
     public ?string $title;
+    public ?int $clinicPatientsCount;
 
     public ?Doctor $doctor_in_charge;
 
@@ -64,13 +65,11 @@ class Clinic implements IModel
 
         if ( !empty( $results ) ) {
 
-            $output = [];
-
             foreach ( $results as $result ) {
                 $result->doctor_in_charge = Doctor::find( $result->doctor_in_charge_id );
-                $output[] = $result;
+                $result->clinicPatientsCount = ClinicPatient::getCount( $result );
             }
-            return $output;
+            return $results;
         }
         return [];
     }

@@ -39,21 +39,39 @@
                          :to="generateBookAppointmentLink(item)">Book appointment
             </router-link>
 
-            <table class="table table-sm table-bordered">
+            <table class="table table-bordered table-striped">
               <thead>
               <tr>
-                <th style="width: 100px" class="text-end">Date</th>
-                <th style="width: 50px" class="text-end">Token</th>
-                <th style="width: 120px" class="text-center">Status</th>
-                <th></th>
+                <th>Date</th>
+                <th>Token No.</th>
+                <th class="text-end">Weight/Height</th>
+                <th class="text-end">SBP/DBP</th>
+                <th class="text-end">Sugar Level</th>
+                <th class="text-center">Status</th>
               </tr>
               </thead>
               <tbody>
-              <tr v-for="appointment in item.appointments">
-                <td class="text-end">{{ appointment.clinic_date }}</td>
-                <td class="text-end">{{ appointment.token_number }}</td>
+              <tr v-for="appointment in item.appointments" :key="appointment.id">
+                <td>
+                  {{ appointment.clinic_date }}
+                </td>
+                <td>{{ appointment.token_number }}</td>
+                <td class="text-end">
+                  <span v-if="appointment.status !== 'ACTIVE'">
+                    {{ appointment.param_weight }} kg / {{ appointment.param_height }} m
+                  </span>
+                </td>
+                <td class="text-end">
+                  <span v-if="appointment.status !== 'ACTIVE'">
+                    {{ appointment.param_sbp }} / {{ appointment.param_dbp }} mmHg
+                  </span>
+                </td>
+                <td class="text-end">
+                  <span v-if="appointment.status !== 'ACTIVE'">
+                    {{ appointment.param_blood_sugar }} mg/dL
+                  </span>
+                </td>
                 <td class="text-center">{{ appointment.status }}</td>
-                <th></th>
               </tr>
               </tbody>
             </table>

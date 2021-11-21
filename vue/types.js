@@ -51,6 +51,7 @@
  * @property {number} id
  * @property {number} doctor_in_charge_id
  * @property {string} title
+ * @property {number} clinicPatientsCount
  * @property {Doctor} doctor_in_charge
  */
 

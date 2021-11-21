@@ -237,4 +237,22 @@ class ClinicAppointment implements IModel
     }
 
 
+    public static function checkExist($clinic_id, $clinic_patient_id, $clinic_date): bool
+    {
+
+        $db = Database::instance();
+        $statement = $db->prepare( 'select * from clinic_appointments where clinic_id=? and clinic_patient_id=? and clinic_date=? limit 1');
+        $statement->execute([
+            $clinic_id, $clinic_patient_id, $clinic_date
+        ]);
+
+
+        $result = $statement->fetchObject(self::class);
+
+        if(!empty( $result)) return true;
+        return  false;
+
+    }
+
+
 }

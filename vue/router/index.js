@@ -1,5 +1,4 @@
-import PagePatientHome from '@/public_patient_views/PagePatientHome.vue';
-import PatientLogin from '@/public_patient_views/PatientLogin.vue';
+import {pharmaRoutes} from '@/router/groups/pharma.js';
 import {publicPatientsRoutes} from '@/router/groups/public_patients.js';
 import Vue from 'vue';
 import VueRouter from 'vue-router';
@@ -30,6 +29,7 @@ const routes = [
     ...doctorsRoutes,
     ...patientsRoutes,
     ...clinicsRoutes,
+    ...pharmaRoutes,
     ...publicPatientsRoutes,
 
     {
@@ -37,7 +37,6 @@ const routes = [
         name: 'Page404',
         component: Page404,
     },
-
 
 
 ];

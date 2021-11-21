@@ -14,7 +14,13 @@ try {
     $fields = [
         'clinic_id' => Request::getAsInteger( 'clinic_id', true ),
         'clinic_date' => Request::getAsString( 'clinic_date', true ),
+        'clinic_patient_id' => Request::getAsInteger( 'clinic_patient_id', true ),
     ];
+
+
+    if ( ClinicAppointment::checkExist( $fields[ 'clinic_id' ], $fields[ 'clinic_patient_id' ], $fields[ 'clinic_date' ] ) ) {
+        throw new Exception( 'Appointment already exist' );
+    }
 
 
     $appointments = ClinicAppointment::getAppointmentsForDay( $fields[ 'clinic_id' ], $fields[ 'clinic_date' ] );

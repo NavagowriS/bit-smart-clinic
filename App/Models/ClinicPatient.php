@@ -172,4 +172,9 @@ class ClinicPatient implements IModel
         return [];
     }
 
+    public static function getCount( Clinic $clinic ): int
+    {
+        return count( self::findByClinic( $clinic )['patients'] );
+    }
+
 }

@@ -14,12 +14,12 @@
 
               <div class="card-title">Manage clinics</div>
 
-              <p>Create a new
-                <router-link to="/clinics/create">clinic</router-link>
-              </p>
+              <div class="mb-3">
+                <router-link to="/clinics/create" class="btn btn-primary">Create a clinic</router-link>
+              </div>
 
 
-              <table class="table table-sm table-bordered">
+              <table class="table table-bordered">
                 <thead>
                 <tr>
                   <th>Title</th>
@@ -37,7 +37,7 @@
                       ({{ item.doctor_in_charge.doctor_speciality.speciality }})
                     </router-link>
                   </td>
-                  <td></td>
+                  <td>{{ item.clinicPatientsCount }}</td>
                 </tr>
                 </tbody>
               </table>
@@ -61,7 +61,7 @@ import {errorDialog} from '@/assets/libs/bs-dialog';
 import TopNavigationBar from '@/components/TopNavigationBar';
 
 export default {
-  name: 'ManageClinics',
+  name: 'PageClinicsList',
   components: { TopNavigationBar },
 
   data() {

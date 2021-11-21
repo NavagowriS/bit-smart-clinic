@@ -15,7 +15,7 @@
       </div>
 
 
-      <div class="row">
+      <div class="row mb-3">
 
         <div class="col-4">
 
@@ -59,6 +59,21 @@
           </CardSection>
         </div>
 
+      </div>
+
+      <div class="row mb-3 justify-content-center">
+        <div class="col-4">
+
+          <CardSection class="text-center">
+            <template v-slot:header>Pharmacy</template>
+
+            <div class="text-center mb-3">
+              <img :src="icons.clinicIcon" class="icon-64" alt="">
+            </div>
+            <router-link to="/pharmacy">Manage pharmacy</router-link>
+
+          </CardSection>
+        </div>
       </div>
 
     </div>
