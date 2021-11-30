@@ -134,3 +134,30 @@
  * @property {ClinicPatient} clinicPatient
  * @property {ClinicAppointment[]} appointments
  */
+
+
+/* --------------------------------------------------- */
+
+/**
+ * @typedef {Object} Drug
+ * @property {number} id
+ * @property {string} drug_name
+ * @property {string} generic_name
+ * @property {string} brand_name
+ * @property {DrugTag[]} drugTags
+ */
+
+/**
+ * @typedef {Object} PharmacyTag
+ * @property {number} id
+ * @property {string} tag
+ */
+
+/**
+ * @typedef {Object} DrugTag
+ * @property {number} id
+ * @property {number} drug_id
+ * @property {number} tag_id
+ * @property {PharmacyTag} tag
+ * @property {Drug} drug
+ */

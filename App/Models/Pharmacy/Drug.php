@@ -4,8 +4,6 @@ namespace App\Models\Pharmacy;
 
 use App\Core\Database\Database;
 use App\Models\IModel;
-use PDO;
-use stdClass;
 
 class Drug implements IModel
 {
@@ -15,7 +13,7 @@ class Drug implements IModel
     public ?int $id;
     public ?string $drug_name, $generic_name, $brand_name;
 
-    /** @var DrugTag[] */
+    /** @var DrugsTag[] */
     public ?array $drugTags;
 
     /**
@@ -34,12 +32,30 @@ class Drug implements IModel
 
     public static function find( int $id )
     {
-        return Database::find( self::TABLE, $id, self::class );
+        /** @var self $result */
+        $result = Database::find( self::TABLE, $id, self::class );
+
+        if ( !empty( $result ) ) {
+//            $result->drugTags = DrugsTag::findByDrug( $result );
+
+            return $result;
+        }
+        return null;
     }
 
     public static function findAll( $limit = 1000, $offset = 0 ): array
     {
-        return Database::findAll( self::TABLE, $limit, $offset, self::class, 'drug_name' );
+        /** @var self[] $results */
+        $results = Database::findAll( self::TABLE, $limit, $offset, self::class, 'drug_name' );
+
+        if ( !empty( $results ) ) {
+            foreach ( $results as $result ) {
+                $result->drugTags = DrugsTag::findByDrug( $result );
+            }
+            return $results;
+        }
+
+        return [];
     }
 
     public function insert(): int
@@ -69,38 +85,5 @@ class Drug implements IModel
         return Database::delete( self::TABLE, 'id', $this->id );
     }
 
-    public function addTag( DrugTag $tag ): int
-    {
-
-        $data = [
-            'drug_id' => $this->id,
-            'tag_id' => $tag->id,
-        ];
-
-        return Database::insert( 'pharma_drug_tags', $data );
-
-    }
-
-    public static function getAllTags( Drug $drug ): array
-    {
-        $db = Database::instance();
-
-        $statement = $db->prepare( 'select * from pharma_drug_tag where drug_id=?' );
-        $statement->execute( [ $drug->id ] );
-
-        $results = $statement->fetchAll( PDO::class, stdClass::class );
-
-        $tags = [];
-
-        if ( !empty( $results ) ) {
-            foreach ( $results as $result ) {
-                $tags[] = DrugTag::find( $result->tag_id );
-            }
-
-
-            return $tags;
-        }
-        return [];
-    }
 
 }

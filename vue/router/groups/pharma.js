@@ -4,12 +4,12 @@ import PageViewAllDrugs from '@/views/pharma/drugs/PageViewAllDrugs.vue';
 import PagePharmaHome from '@/views/pharma/PagePharmaHome.vue';
 import PagePharmaStats from '@/views/pharma/PagePharmaStats.vue';
 import PageAddTag from '@/views/pharma/tags/PageAddTag.vue';
+import PageEditTag from '@/views/pharma/tags/PageEditTag.vue';
 import PageViewAllTags from '@/views/pharma/tags/PageViewAllTags.vue';
 
 export const pharmaRoutes = [
     {
         path: '/pharmacy',
-        name: 'PagePharmaHome',
         component: PagePharmaHome,
         meta: {
             requiresAuth: true,
@@ -18,7 +18,7 @@ export const pharmaRoutes = [
         children: [
             {
                 path: '/',
-                name: 'PagePharmaStats',
+                name: 'PagePharmaHome',
                 component: PagePharmaStats,
             },
 
@@ -49,6 +49,11 @@ export const pharmaRoutes = [
                 path: '/tags/add',
                 name: 'PageAddTag',
                 component: PageAddTag,
+            },
+            {
+                path: '/tags/edit/:id',
+                name: 'PageEditTag',
+                component: PageEditTag,
             },
         ],
     },
