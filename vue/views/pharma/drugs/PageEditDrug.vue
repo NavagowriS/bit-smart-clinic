@@ -2,8 +2,20 @@
 
   <div class="">
 
-    <CardSection>
-      <template v-slot:header>Edit {{ editDrug.drug_name }}</template>
+    <!-- Edit Drug -->
+    <CardSection class="mb-3" v-if="editVisible">
+      <template v-slot:header>
+        <div class="d-flex justify-content-between">
+          <div class="">
+            Edit {{ editDrug.drug_name }}
+          </div>
+          <div class="">
+            <button class="btn btn-sm btn-secondary" @click="editVisible = false">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+        </div>
+      </template>
 
       <div class="">
 
@@ -75,14 +87,64 @@
             </div>
 
           </div>
-
-
         </div><!-- drug tags -->
-
-
       </div>
 
     </CardSection>
+    <!-- Edit Drug -->
+
+
+    <CardSection class="mb-3" v-if="!editVisible">
+      <template v-slot:header>
+        <div class="d-flex justify-content-between">
+          <div class="">
+            {{ editDrug.drug_name }}
+          </div>
+          <div class="">
+            <button class="btn btn-sm btn-secondary" @click="editVisible = true">
+              <i class="bi bi-pencil-fill"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <div class="row g-2 mb-3">
+
+        <div class="col">
+          <div class="input-group">
+            <span class="input-group-text">Generic Name</span>
+            <input type="text" disabled class="form-control bg-white" :value="editDrug.generic_name">
+          </div>
+        </div>
+        <div class="col">
+          <div class="input-group">
+            <span class="input-group-text">Brand Name</span>
+            <input type="text" disabled class="form-control bg-white" :value="editDrug.brand_name">
+          </div>
+        </div>
+
+      </div><!-- row -->
+
+      <div class="row">
+        <div class="col">
+          <div>Tags</div>
+          <div class="d-flex flex-wrap gap-2">
+
+            <div class="" v-for="item in addedTags">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white">{{ item.tag.tag }}</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </CardSection>
+
+
+    <DrugPurchaseOrders :drug-id="drugId"/>
 
   </div>
 
@@ -91,10 +153,11 @@
 <script>
 import {errorDialog, successDialog} from '@/assets/libs/bs-dialog.js';
 import CardSection from '@/components/CardSection.vue';
+import DrugPurchaseOrders from '@/views/pharma/drugs/components/DrugPurchaseOrders.vue';
 
 export default {
   name: 'PageEditDrug',
-  components: { CardSection },
+  components: { DrugPurchaseOrders, CardSection },
 
   data() {
     return {
@@ -113,6 +176,8 @@ export default {
       addedTags: [],
 
       selectedTag: null,
+
+      editVisible: false,
 
     };
   },

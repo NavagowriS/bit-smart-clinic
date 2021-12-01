@@ -42,6 +42,17 @@ export const pharmacyDrugsStore = {
             return await axios.post( 'pharmacy/drugs/update.php', params );
         },
 
+        /**
+         *
+         * @param context
+         * @param keyword
+         */
+        async search( context, keyword ) {
+            const response = await axios.post( 'pharmacy/drugs/search.php', { keyword: keyword } );
+            return response.data.payload;
+        },
+
+
         /*
         ------------------
         drug tags
@@ -113,7 +124,37 @@ export const pharmacyDrugsStore = {
         },
 
         async deleteTag( context, id ) {
-            return await axios.post( 'pharmacy/tags/delete.php', {id: id} );
+            return await axios.post( 'pharmacy/tags/delete.php', { id: id } );
+        },
+
+        /**
+         *
+         * @param context
+         * @param id - drugId
+         */
+        async findDrugsByTag( context, id ) {
+            const response = await axios.post( 'pharmacy/tags/filter-by.php', { id: id } );
+            return response.data.payload;
+        },
+
+        /*
+        ------------------
+        purchase orders
+        ------------------
+        */
+
+        /**
+         *
+         * @param context
+         * @param params [drug_id, order_date, quantity]
+         */
+        async createPurchaseOrder( context, params ) {
+            return await axios.post( 'pharmacy/po/create.php', params );
+        },
+
+        async fetchPurchaseOrdersByDrug( context, drugId ) {
+            const response = await axios.post( 'pharmacy/po/by-drug.php', { drug_id: drugId } );
+            return response.data.payload;
         },
 
 

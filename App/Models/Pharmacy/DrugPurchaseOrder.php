@@ -50,7 +50,7 @@ class DrugPurchaseOrder implements \App\Models\IModel
     {
 
         $db = Database::instance();
-        $statement = $db->prepare( 'select * from pharma_drugs_po where drug_id=?' );
+        $statement = $db->prepare( 'select * from pharma_drug_po where drug_id=? order by order_date desc' );
         $statement->execute( [ $drug->id ] );
 
         /** @var self[] $results */

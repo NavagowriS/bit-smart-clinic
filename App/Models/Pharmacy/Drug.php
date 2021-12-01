@@ -4,6 +4,7 @@ namespace App\Models\Pharmacy;
 
 use App\Core\Database\Database;
 use App\Models\IModel;
+use PDO;
 
 class Drug implements IModel
 {
@@ -30,14 +31,12 @@ class Drug implements IModel
     }
 
 
-    public static function find( int $id )
+    public static function find( int $id ): ?Drug
     {
         /** @var self $result */
         $result = Database::find( self::TABLE, $id, self::class );
 
         if ( !empty( $result ) ) {
-//            $result->drugTags = DrugsTag::findByDrug( $result );
-
             return $result;
         }
         return null;
@@ -83,6 +82,26 @@ class Drug implements IModel
     public function delete(): bool
     {
         return Database::delete( self::TABLE, 'id', $this->id );
+    }
+
+    public static function search( string $keyword ): array
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'select * from pharma_drugs where drug_name like :q or generic_name like :q or brand_name like :q' );
+
+        $statement->execute( [ ':q' => '%' . $keyword . '%' ] );
+
+        /** @var self[] $results */
+        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+
+        if ( !empty( $results ) ) {
+            foreach ( $results as $result ) {
+                $result->drugTags = DrugsTag::findByDrug( $result );
+            }
+            return $results;
+        }
+
+        return [];
     }
 
 

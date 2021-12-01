@@ -1,26 +1,13 @@
 <template>
 
-
-  <div class="">
+  <div class="" v-if="loaded">
 
     <CardSection>
 
-      <template v-slot:header>All Drugs</template>
+      <template v-slot:header>Filtered by: {{ tag.tag }}</template>
 
 
       <div class="">
-
-        <div class="mb-3 d-flex justify-content-end">
-          <div class="input-group">
-            <span class="input-group-text">Search</span>
-            <input type="text" class="form-control" @keydown="onDebouncedSearch" placeholder="search with keywords..." v-model.trim="searchKeyword">
-            <button class="btn btn-primary" @click="onSearch">Search</button>
-          </div>
-        </div>
-
-        <div class="mb-3" v-if="searched && searchKeyword.length > 0">
-          <p class="lead">You've searched for {{ searchKeyword }}</p>
-        </div>
 
         <table class="table table-hover table-sm table-bordered" v-if="drugsList.length > 0">
           <thead>
@@ -65,75 +52,63 @@
 </template>
 
 <script>
-import {errorDialog} from '@/assets/libs/bs-dialog.js';
 import CardSection from '@/components/CardSection.vue';
 import {showErrorDialog} from '@/helpers/common.js';
 
-const _ = require( 'lodash' );
-
 export default {
-  name: 'PageViewAllDrugs',
+  name: 'PageFilterDrugs',
   components: { CardSection },
-
   data() {
     return {
 
-      /** @type Drug[] */
       drugsList: [],
+      tag: null,
 
-      searchKeyword: '',
-      searched: false,
+      loaded: false,
 
     };
   },
 
-
   computed: {
-    //
+
+    tagId() {
+      return this.$route.params[ 'tagId' ];
+    },
+
+  },
+
+  watch: {
+    async tagId() {
+      await this.fetchDrugs();
+    },
   },
 
   async mounted() {
-
-    try {
-
-      this.drugsList = await this.$store.dispatch( 'pharmacyDrugs/fetchAll' );
-
-    } catch ( e ) {
-      errorDialog( {
-        message: 'Failed to fetch drugs',
-      } );
-    }
-
+    await this.fetchDrugs();
   },
 
   methods: {
 
-    onDebouncedSearch: _.debounce( async function () {
-      await this.onSearch();
-    }, 500 ),
+    async fetchDrugs() {
 
-
-    onSearch: async function () {
       try {
 
-        console.log( this.searchKeyword );
+        this.tag = await this.$store.dispatch( 'pharmacyDrugs/fetchTag', this.tagId );
+        this.drugsList = await this.$store.dispatch( 'pharmacyDrugs/findDrugsByTag', this.tagId );
 
-        this.drugsList = await this.$store.dispatch( 'pharmacyDrugs/search', this.searchKeyword );
-
-        this.searched = true;
+        this.loaded = true;
 
       } catch ( e ) {
-
         if ( e.response ) {
           showErrorDialog( { message: e.response.data.payload.error } );
         } else {
-          showErrorDialog( { message: 'Failed to fetch search results' } );
+          showErrorDialog( { message: 'Failed to fetch data' } );
         }
-
       }
     },
 
   },
+
 
 };
 </script>

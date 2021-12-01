@@ -5,6 +5,7 @@ namespace App\Models\Pharmacy;
 use App\Core\Database\Database;
 use App\Models\IModel;
 use Exception;
+use PDO;
 
 class PharmacyTag implements IModel
 {
@@ -27,7 +28,11 @@ class PharmacyTag implements IModel
         return $object;
     }
 
-    public static function find( int $id )
+    /**
+     * @param int $id
+     * @return self
+     */
+    public static function find( int $id ): PharmacyTag
     {
         return Database::find( self::TABLE, $id, self::class );
     }
@@ -76,6 +81,30 @@ class PharmacyTag implements IModel
         if ( !empty( $result ) ) return true;
         return false;
 
+    }
+
+    public function findAllDrugs(): array
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'select * from pharma_drugs_tags where tag_id = ?' );
+        $statement->execute( [ $this->id ] );
+
+        /** @var DrugsTag[] $results */
+        $results = $statement->fetchAll( PDO::FETCH_CLASS, DrugsTag::class );
+
+        if ( !empty( $results ) ) {
+
+            $drugs = [];
+
+            foreach ( $results as $result ) {
+                $drug = Drug::find( $result->drug_id );
+                $drug->drugTags = DrugsTag::findByDrug( $drug );
+                $drugs[] = $drug;
+            }
+
+            return $drugs;
+        }
+        return [];
     }
 
 }

@@ -1,5 +1,6 @@
 import PageAddDrug from '@/views/pharma/drugs/PageAddDrug.vue';
 import PageEditDrug from '@/views/pharma/drugs/PageEditDrug.vue';
+import PageFilterDrugs from '@/views/pharma/drugs/PageFilterDrugs.vue';
 import PageViewAllDrugs from '@/views/pharma/drugs/PageViewAllDrugs.vue';
 import PagePharmaHome from '@/views/pharma/PagePharmaHome.vue';
 import PagePharmaStats from '@/views/pharma/PagePharmaStats.vue';
@@ -37,6 +38,11 @@ export const pharmaRoutes = [
                 path: '/drugs/edit/:id',
                 name: 'PageEditDrug',
                 component: PageEditDrug,
+            },
+            {
+                path: '/drugs/filter/:tagId',
+                name: 'PageFilterDrugs',
+                component: PageFilterDrugs,
             },
 
             /* tags pages */
