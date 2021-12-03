@@ -145,6 +145,8 @@
  * @property {string} generic_name
  * @property {string} brand_name
  * @property {DrugTag[]} drugTags
+ * @property {number} total_count
+ * @property {number} min_quantity
  */
 
 /**

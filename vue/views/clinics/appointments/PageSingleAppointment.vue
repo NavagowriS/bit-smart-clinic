@@ -13,11 +13,22 @@
 
             <div class="section__patient_details d-flex justify-content-between">
 
-              <div class="d-flex flex-column">
-                <h2 class="">{{ patient.full_name }}</h2>
-                <div class="lead">DoB: {{ patient.dob }} ({{ patient.age }})</div>
-                <div class="">Gender: {{ patient.gender }}</div>
+              <div class="d-flex gap-5">
+                <div class="d-flex flex-column align-items-center gap-2 bg-dark text-white p-3 rounded">
+                  <div class="lead">TOKEN</div>
+                  <div class="token_number fw-bold">
+                    {{ appointment.token_number }}
+                  </div>
+                </div>
+
+                <div class="d-flex flex-column">
+                  <h2 class="">{{ patient.full_name }}</h2>
+                  <div class="lead">DoB: {{ patient.dob }} ({{ patient.age }})</div>
+                  <div class="">Gender: {{ patient.gender }}</div>
+                </div>
+
               </div>
+
 
               <div class="d-flex flex-column">
                 <h4>Phone: {{ patient.phone }}</h4>
@@ -44,12 +55,7 @@
             </div>
 
             <!-- right side -->
-            <div class="d-flex flex-column align-items-center gap-2">
-              <div class="lead">TOKEN</div>
-              <div class="token_number fw-bold">
-                {{ appointment.token_number }}
-              </div>
-            </div>
+
 
           </div>
 
@@ -104,7 +110,7 @@
                 <div class="visit_doctor_remarks">
                   <div class="mb-3">
                     <label class="form-label">Doctor remarks</label>
-                    <textarea rows="20" class="form-control" v-model="appointment.doctor_remarks" :disabled="formDisabled"></textarea>
+                    <textarea rows="10" class="form-control" v-model="appointment.doctor_remarks" :disabled="formDisabled"></textarea>
                   </div>
                 </div>
 
@@ -136,6 +142,13 @@
           </CardSection>
           <!-- CARD: Visit details -->
 
+        </div><!-- col -->
+      </div><!-- row -->
+
+
+      <!-- section: prescription -->
+      <div class="row">
+        <div class="col">
 
         </div><!-- col -->
       </div><!-- row -->

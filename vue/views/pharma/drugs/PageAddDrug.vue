@@ -9,7 +9,7 @@
 
       <div class="">
 
-        <div class="row">
+        <div class="row g-2">
           <div class="col">
 
             <div class="mb-3">
@@ -35,6 +35,15 @@
           </div><!-- col -->
         </div><!-- row -->
 
+        <div class="row">
+          <div class="col-4">
+            <div class="mb-3">
+              <label class="form-label">Minimum Quantity Threshold</label>
+              <input type="number" class="form-control" v-model.number="formSaveDrug.min_quantity">
+            </div>
+          </div>
+        </div>
+
 
         <div class="text-center">
           <button class="btn btn-primary" @click="onSave()">Save</button>
@@ -51,8 +60,8 @@
 </template>
 
 <script>
-import {errorDialog} from '@/assets/libs/bs-dialog.js';
 import CardSection from '@/components/CardSection.vue';
+import {showErrorDialog} from '@/helpers/common.js';
 
 export default {
   name: 'PageAddDrug',
@@ -65,6 +74,7 @@ export default {
         drug_name: '',
         generic_name: '',
         brand_name: '',
+        min_quantity: 500,
       },
 
     };
@@ -86,12 +96,14 @@ export default {
 
         const response = await this.$store.dispatch( 'pharmacyDrugs/create', this.formSaveDrug );
 
-        console.log( response.data.payload );
+        const drugAdded = response.data.payload.data;
+
+        await this.$router.push( { name: 'PageEditDrug', params: { id: drugAdded.id } } );
 
       } catch ( e ) {
-        errorDialog( {
-          message: 'Failed to save the drug details',
-        } );
+
+        showErrorDialog( e.response, 'Failed to save' );
+
       }
 
     },

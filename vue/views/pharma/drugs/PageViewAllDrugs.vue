@@ -28,6 +28,7 @@
             <th>Drug</th>
             <th>Generic Name</th>
             <th>Brand Name</th>
+            <th class="text-end" style="width: 120px">Total Count</th>
             <th>Tags</th>
           </tr>
           </thead>
@@ -42,6 +43,7 @@
             </td>
             <td>{{ item.generic_name }}</td>
             <td>{{ item.brand_name }}</td>
+            <td class="text-end">{{ item.total_count }}</td>
             <td>
               <div v-for="tag in item.drugTags" class="p-1 me-1 border border-1 d-inline-block">
                 <router-link :to="{name: 'PageFilterDrugs', params:{tagId: tag.tag_id}}">{{ tag.tag.tag }}</router-link>

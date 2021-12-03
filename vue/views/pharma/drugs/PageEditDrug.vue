@@ -1,6 +1,6 @@
 <template>
 
-  <div class="">
+  <div class="" v-if="loaded">
 
     <!-- Edit Drug -->
     <CardSection class="mb-3" v-if="editVisible">
@@ -31,17 +31,23 @@
             </div><!-- col -->
           </div><!-- row -->
 
-          <div class="row">
+          <div class="row g-2">
             <div class="col">
               <div class="mb-3">
-                <label class="form-label">Generic name</label>
+                <label class="form-label">G.N</label>
                 <input type="text" class="form-control" v-model.trim="editDrug.generic_name">
               </div>
             </div><!-- col -->
             <div class="col">
               <div class="mb-3">
-                <label class="form-label">Brand name</label>
+                <label class="form-label">B.N</label>
                 <input type="text" class="form-control" v-model.trim="editDrug.brand_name">
+              </div>
+            </div><!-- col -->
+            <div class="col">
+              <div class="mb-3">
+                <label class="form-label">Min.</label>
+                <input type="text" class="form-control" v-model.trim="editDrug.min_quantity">
               </div>
             </div><!-- col -->
           </div><!-- row -->
@@ -112,20 +118,36 @@
 
         <div class="col">
           <div class="input-group">
-            <span class="input-group-text">Generic Name</span>
+            <span class="input-group-text">G.N</span>
             <input type="text" disabled class="form-control bg-white" :value="editDrug.generic_name">
           </div>
         </div>
         <div class="col">
           <div class="input-group">
-            <span class="input-group-text">Brand Name</span>
+            <span class="input-group-text">B.N</span>
             <input type="text" disabled class="form-control bg-white" :value="editDrug.brand_name">
           </div>
         </div>
 
       </div><!-- row -->
 
-      <div class="row">
+      <div class="row g-2 mb-3">
+        <div class="col">
+          <div class="input-group">
+            <span class="input-group-text">Available</span>
+            <input type="text" class="form-control" v-model.trim="editDrug.total_count">
+          </div>
+        </div>
+        <div class="col">
+          <div class="input-group">
+            <span class="input-group-text">Min.Threshold</span>
+            <input type="text" class="form-control" v-model.trim="editDrug.min_quantity">
+          </div>
+        </div>
+      </div>
+
+
+      <div class="row mb-3" v-if="addedTags.length > 0">
         <div class="col">
           <div>Tags</div>
           <div class="d-flex flex-wrap gap-2">
@@ -139,20 +161,30 @@
           </div>
 
         </div>
+      </div><!-- row -->
+
+
+      <div class="alert alert-danger text-center" v-if="lowQuantityWarning">
+        <div class="text-center">
+          <i class="bi bi-exclamation-triangle-fill" style="font-size: 48px"></i>
+        </div>
+        <p class="lead">Stock quantity available is lower than minimum quantity threshold.</p>
+        <p>Available Quantity: {{ editDrug.total_count }}</p>
       </div>
 
     </CardSection>
 
 
-    <DrugPurchaseOrders :drug-id="drugId"/>
+    <DrugPurchaseOrders :drug-id="drugId" @updated="fetchDrugDetails"/>
 
   </div>
 
 </template>
 
 <script>
-import {errorDialog, successDialog} from '@/assets/libs/bs-dialog.js';
+import {successDialog} from '@/assets/libs/bs-dialog.js';
 import CardSection from '@/components/CardSection.vue';
+import {showErrorDialog} from '@/helpers/common.js';
 import DrugPurchaseOrders from '@/views/pharma/drugs/components/DrugPurchaseOrders.vue';
 
 export default {
@@ -162,11 +194,15 @@ export default {
   data() {
     return {
 
+      loaded: false,
+
       editDrug: {
         id: null,
         drug_name: '',
         brand_name: '',
         generic_name: '',
+        min_quantity: 0,
+        total_count: 0,
       },
 
       /** @type DrugTag[] */
@@ -188,6 +224,11 @@ export default {
       return parseInt( this.$route.params[ 'id' ] );
     },
 
+    lowQuantityWarning() {
+      if ( this.editDrug.total_count < this.editDrug.min_quantity ) return true;
+      return false;
+    },
+
   },
 
 
@@ -201,15 +242,23 @@ export default {
 
       this.addedTags = await this.$store.dispatch( 'pharmacyDrugs/fetchAllDrugTags', this.drugId );
 
+      this.loaded = true;
+
     } catch ( e ) {
-      errorDialog( {
-        message: 'Failed to fetch drug details',
-      } );
+      showErrorDialog( e.response, 'Failed.' );
     }
 
   },
 
   methods: {
+
+    async fetchDrugDetails() {
+      try {
+        this.editDrug = await this.$store.dispatch( 'pharmacyDrugs/fetch', this.drugId );
+      } catch ( e ) {
+        showErrorDialog( e.response, 'Failed.' );
+      }
+    },
 
     async onUpdate() {
 
@@ -223,9 +272,7 @@ export default {
 
 
       } catch ( e ) {
-        errorDialog( {
-          message: 'Failed to update drug details',
-        } );
+        showErrorDialog( e.response, 'Failed.' );
       }
 
     }, /* onUpdate */
@@ -246,18 +293,7 @@ export default {
 
       } catch ( e ) {
 
-        /* error originated from server side */
-        if ( e.response ) {
-
-          errorDialog( {
-            message: e.response.data.payload.error,
-          } );
-
-        } else {
-          errorDialog( {
-            message: 'Failed to add a tag to the drug',
-          } );
-        }
+        showErrorDialog( e.response, 'Failed.' );
 
       }
 
@@ -272,18 +308,7 @@ export default {
         this.addedTags = await this.$store.dispatch( 'pharmacyDrugs/fetchAllDrugTags', this.drugId );
 
       } catch ( e ) {
-        /* error originated from server side */
-        if ( e.response ) {
-
-          errorDialog( {
-            message: e.response.data.payload.error,
-          } );
-
-        } else {
-          errorDialog( {
-            message: 'Failed to add a tag to the drug',
-          } );
-        }
+        showErrorDialog( e.response, 'Failed.' );
       }
 
     }, /* onRemoveTag */

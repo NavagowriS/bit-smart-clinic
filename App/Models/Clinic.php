@@ -149,12 +149,10 @@ class Clinic implements IModel
 
             foreach ( $clinicPatients as $clinicPatient ) {
                 $clinic = Clinic::find( $clinicPatient->clinic_id );
-                $visitDetails = ClinicPatient::getAllClinicVisitDetails( $clinicPatient->id );
                 $appointments = ClinicAppointment::getByClinicPatient( $clinicPatient->id );
 
                 $output[] = [
                     'clinic' => $clinic,
-                    'visitDetails' => $visitDetails,
                     'clinicPatient' => $clinicPatient,
                     'appointments' => $appointments,
                 ];

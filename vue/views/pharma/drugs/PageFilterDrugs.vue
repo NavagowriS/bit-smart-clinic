@@ -99,11 +99,7 @@ export default {
         this.loaded = true;
 
       } catch ( e ) {
-        if ( e.response ) {
-          showErrorDialog( { message: e.response.data.payload.error } );
-        } else {
-          showErrorDialog( { message: 'Failed to fetch data' } );
-        }
+        showErrorDialog( e.response, 'Failed.' );
       }
     },
 

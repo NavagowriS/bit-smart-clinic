@@ -22,6 +22,7 @@ try {
         "drug_name" => Request::getAsString( "drug_name", true ),
         "generic_name" => Request::getAsString( "generic_name" ),
         "brand_name" => Request::getAsString( "brand_name" ),
+        "min_quantity" => Request::getAsInteger( "min_quantity" ),
     ];
 
     $drug = Drug::find( $fields[ 'id' ] );

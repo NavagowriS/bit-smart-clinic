@@ -4295,6 +4295,19 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 
@@ -8363,7 +8376,40 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/regenerator */ "./node_modules/@babel/runtime/regenerator/index.js");
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+/* harmony import */ var _helpers_common_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/helpers/common.js */ "./vue/helpers/common.js");
+
+
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 //
 //
 //
@@ -8380,10 +8426,54 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 
+
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   name: 'PagePharmaStats',
   components: {
-    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_0__["default"]
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_1__["default"]
+  },
+  data: function data() {
+    return {
+      drugStats: []
+    };
+  },
+  computed: {
+    /** @returns {Drug[]} */
+    thresholdWarnings: function thresholdWarnings() {
+      return this.drugStats['threshold_warnings'];
+    }
+  },
+  methods: {//
+  },
+  mounted: function mounted() {
+    var _this = this;
+
+    return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee() {
+      return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee$(_context) {
+        while (1) {
+          switch (_context.prev = _context.next) {
+            case 0:
+              _context.prev = 0;
+              _context.next = 3;
+              return _this.$store.dispatch('pharmacyDrugs/stats');
+
+            case 3:
+              _this.drugStats = _context.sent;
+              _context.next = 9;
+              break;
+
+            case 6:
+              _context.prev = 6;
+              _context.t0 = _context["catch"](0);
+              (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_2__.showErrorDialog)(_context.t0.response, 'Failed to fetch stats');
+
+            case 9:
+            case "end":
+              return _context.stop();
+          }
+        }
+      }, _callee, null, [[0, 6]]);
+    }))();
   }
 });
 
@@ -8448,14 +8538,23 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/regenerator */ "./node_modules/@babel/runtime/regenerator/index.js");
 /* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/assets/libs/bs-dialog.js */ "./vue/assets/libs/bs-dialog.js");
-/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+/* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
+/* harmony import */ var _helpers_common_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/helpers/common.js */ "./vue/helpers/common.js");
 
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
+//
+//
+//
+//
+//
+//
+//
+//
+//
 //
 //
 //
@@ -8513,14 +8612,15 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   name: 'PageAddDrug',
   components: {
-    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_2__["default"]
+    CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_1__["default"]
   },
   data: function data() {
     return {
       formSaveDrug: {
         drug_name: '',
         generic_name: '',
-        brand_name: ''
+        brand_name: '',
+        min_quantity: 500
       }
     };
   },
@@ -8533,7 +8633,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
       var _this = this;
 
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee() {
-        var response;
+        var response, drugAdded;
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee$(_context) {
           while (1) {
             switch (_context.prev = _context.next) {
@@ -8544,23 +8644,30 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 
               case 3:
                 response = _context.sent;
-                console.log(response.data.payload);
-                _context.next = 10;
-                break;
-
-              case 7:
-                _context.prev = 7;
-                _context.t0 = _context["catch"](0);
-                (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.errorDialog)({
-                  message: 'Failed to save the drug details'
+                drugAdded = response.data.payload.data;
+                _context.next = 7;
+                return _this.$router.push({
+                  name: 'PageEditDrug',
+                  params: {
+                    id: drugAdded.id
+                  }
                 });
 
-              case 10:
+              case 7:
+                _context.next = 12;
+                break;
+
+              case 9:
+                _context.prev = 9;
+                _context.t0 = _context["catch"](0);
+                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_2__.showErrorDialog)(_context.t0.response, 'Failed to save');
+
+              case 12:
               case "end":
                 return _context.stop();
             }
           }
-        }, _callee, null, [[0, 7]]);
+        }, _callee, null, [[0, 9]]);
       }))();
     }
   }
@@ -8583,7 +8690,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/assets/libs/bs-dialog.js */ "./vue/assets/libs/bs-dialog.js");
 /* harmony import */ var _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/components/CardSection.vue */ "./vue/components/CardSection.vue");
-/* harmony import */ var _views_pharma_drugs_components_DrugPurchaseOrders_vue__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/views/pharma/drugs/components/DrugPurchaseOrders.vue */ "./vue/views/pharma/drugs/components/DrugPurchaseOrders.vue");
+/* harmony import */ var _helpers_common_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/helpers/common.js */ "./vue/helpers/common.js");
+/* harmony import */ var _views_pharma_drugs_components_DrugPurchaseOrders_vue__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/views/pharma/drugs/components/DrugPurchaseOrders.vue */ "./vue/views/pharma/drugs/components/DrugPurchaseOrders.vue");
 
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -8742,22 +8850,57 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
 
 
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   name: 'PageEditDrug',
   components: {
-    DrugPurchaseOrders: _views_pharma_drugs_components_DrugPurchaseOrders_vue__WEBPACK_IMPORTED_MODULE_3__["default"],
+    DrugPurchaseOrders: _views_pharma_drugs_components_DrugPurchaseOrders_vue__WEBPACK_IMPORTED_MODULE_4__["default"],
     CardSection: _components_CardSection_vue__WEBPACK_IMPORTED_MODULE_2__["default"]
   },
   data: function data() {
     return {
+      loaded: false,
       editDrug: {
         id: null,
         drug_name: '',
         brand_name: '',
-        generic_name: ''
+        generic_name: '',
+        min_quantity: 0,
+        total_count: 0
       },
 
       /** @type DrugTag[] */
@@ -8770,6 +8913,10 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
   computed: {
     drugId: function drugId() {
       return parseInt(this.$route.params['id']);
+    },
+    lowQuantityWarning: function lowQuantityWarning() {
+      if (this.editDrug.total_count < this.editDrug.min_quantity) return true;
+      return false;
     }
   },
   mounted: function mounted() {
@@ -8796,26 +8943,25 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 
             case 9:
               _this.addedTags = _context.sent;
-              _context.next = 15;
+              _this.loaded = true;
+              _context.next = 16;
               break;
 
-            case 12:
-              _context.prev = 12;
+            case 13:
+              _context.prev = 13;
               _context.t0 = _context["catch"](0);
-              (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.errorDialog)({
-                message: 'Failed to fetch drug details'
-              });
+              (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_3__.showErrorDialog)(_context.t0.response, 'Failed.');
 
-            case 15:
+            case 16:
             case "end":
               return _context.stop();
           }
         }
-      }, _callee, null, [[0, 12]]);
+      }, _callee, null, [[0, 13]]);
     }))();
   },
   methods: {
-    onUpdate: function onUpdate() {
+    fetchDrugDetails: function fetchDrugDetails() {
       var _this2 = this;
 
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee2() {
@@ -8825,21 +8971,17 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
               case 0:
                 _context2.prev = 0;
                 _context2.next = 3;
-                return _this2.$store.dispatch('pharmacyDrugs/update', _this2.editDrug);
+                return _this2.$store.dispatch('pharmacyDrugs/fetch', _this2.drugId);
 
               case 3:
-                (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.successDialog)({
-                  message: 'Drug details updated'
-                });
+                _this2.editDrug = _context2.sent;
                 _context2.next = 9;
                 break;
 
               case 6:
                 _context2.prev = 6;
                 _context2.t0 = _context2["catch"](0);
-                (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.errorDialog)({
-                  message: 'Failed to update drug details'
-                });
+                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_3__.showErrorDialog)(_context2.t0.response, 'Failed.');
 
               case 9:
               case "end":
@@ -8849,101 +8991,113 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
         }, _callee2, null, [[0, 6]]);
       }))();
     },
-
-    /* onUpdate */
-    onAddTag: function onAddTag() {
+    onUpdate: function onUpdate() {
       var _this3 = this;
 
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee3() {
-        var params;
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee3$(_context3) {
           while (1) {
             switch (_context3.prev = _context3.next) {
               case 0:
                 _context3.prev = 0;
-                params = {
-                  drug_id: _this3.drugId,
-                  tag_id: _this3.selectedTag
-                };
-                _context3.next = 4;
-                return _this3.$store.dispatch('pharmacyDrugs/addDrugTag', params);
+                _context3.next = 3;
+                return _this3.$store.dispatch('pharmacyDrugs/update', _this3.editDrug);
 
-              case 4:
-                _context3.next = 6;
-                return _this3.$store.dispatch('pharmacyDrugs/fetchAllDrugTags', _this3.drugId);
-
-              case 6:
-                _this3.addedTags = _context3.sent;
-                _context3.next = 12;
+              case 3:
+                (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.successDialog)({
+                  message: 'Drug details updated'
+                });
+                _context3.next = 9;
                 break;
 
-              case 9:
-                _context3.prev = 9;
+              case 6:
+                _context3.prev = 6;
                 _context3.t0 = _context3["catch"](0);
+                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_3__.showErrorDialog)(_context3.t0.response, 'Failed.');
 
-                /* error originated from server side */
-                if (_context3.t0.response) {
-                  (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.errorDialog)({
-                    message: _context3.t0.response.data.payload.error
-                  });
-                } else {
-                  (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.errorDialog)({
-                    message: 'Failed to add a tag to the drug'
-                  });
-                }
-
-              case 12:
+              case 9:
               case "end":
                 return _context3.stop();
             }
           }
-        }, _callee3, null, [[0, 9]]);
+        }, _callee3, null, [[0, 6]]);
       }))();
     },
 
-    /* onAddTag */
-    onRemoveTag: function onRemoveTag(tagId) {
+    /* onUpdate */
+    onAddTag: function onAddTag() {
       var _this4 = this;
 
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee4() {
+        var params;
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee4$(_context4) {
           while (1) {
             switch (_context4.prev = _context4.next) {
               case 0:
                 _context4.prev = 0;
-                _context4.next = 3;
-                return _this4.$store.dispatch('pharmacyDrugs/removeDrugTag', tagId);
+                params = {
+                  drug_id: _this4.drugId,
+                  tag_id: _this4.selectedTag
+                };
+                _context4.next = 4;
+                return _this4.$store.dispatch('pharmacyDrugs/addDrugTag', params);
 
-              case 3:
-                _context4.next = 5;
+              case 4:
+                _context4.next = 6;
                 return _this4.$store.dispatch('pharmacyDrugs/fetchAllDrugTags', _this4.drugId);
 
-              case 5:
+              case 6:
                 _this4.addedTags = _context4.sent;
-                _context4.next = 11;
+                _context4.next = 12;
                 break;
 
-              case 8:
-                _context4.prev = 8;
+              case 9:
+                _context4.prev = 9;
                 _context4.t0 = _context4["catch"](0);
+                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_3__.showErrorDialog)(_context4.t0.response, 'Failed.');
 
-                /* error originated from server side */
-                if (_context4.t0.response) {
-                  (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.errorDialog)({
-                    message: _context4.t0.response.data.payload.error
-                  });
-                } else {
-                  (0,_assets_libs_bs_dialog_js__WEBPACK_IMPORTED_MODULE_1__.errorDialog)({
-                    message: 'Failed to add a tag to the drug'
-                  });
-                }
-
-              case 11:
+              case 12:
               case "end":
                 return _context4.stop();
             }
           }
-        }, _callee4, null, [[0, 8]]);
+        }, _callee4, null, [[0, 9]]);
+      }))();
+    },
+
+    /* onAddTag */
+    onRemoveTag: function onRemoveTag(tagId) {
+      var _this5 = this;
+
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee5() {
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee5$(_context5) {
+          while (1) {
+            switch (_context5.prev = _context5.next) {
+              case 0:
+                _context5.prev = 0;
+                _context5.next = 3;
+                return _this5.$store.dispatch('pharmacyDrugs/removeDrugTag', tagId);
+
+              case 3:
+                _context5.next = 5;
+                return _this5.$store.dispatch('pharmacyDrugs/fetchAllDrugTags', _this5.drugId);
+
+              case 5:
+                _this5.addedTags = _context5.sent;
+                _context5.next = 11;
+                break;
+
+              case 8:
+                _context5.prev = 8;
+                _context5.t0 = _context5["catch"](0);
+                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_3__.showErrorDialog)(_context5.t0.response, 'Failed.');
+
+              case 11:
+              case "end":
+                return _context5.stop();
+            }
+          }
+        }, _callee5, null, [[0, 8]]);
       }))();
     }
     /* onRemoveTag */
@@ -9113,16 +9267,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
               case 10:
                 _context3.prev = 10;
                 _context3.t0 = _context3["catch"](0);
-
-                if (_context3.t0.response) {
-                  (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_2__.showErrorDialog)({
-                    message: _context3.t0.response.data.payload.error
-                  });
-                } else {
-                  (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_2__.showErrorDialog)({
-                    message: 'Failed to fetch data'
-                  });
-                }
+                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_2__.showErrorDialog)(_context3.t0.response, 'Failed.');
 
               case 13:
               case "end":
@@ -9159,6 +9304,8 @@ function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
+//
+//
 //
 //
 //
@@ -9428,6 +9575,12 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 //
 //
 //
+//
+//
+//
+//
+//
+//
 
 
 
@@ -9479,69 +9632,94 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 
                 _this.$refs.modal_add_purchase_order.close();
 
-                _context.next = 12;
+                _this.$emit('updated');
+
+                _context.next = 13;
                 break;
 
-              case 9:
-                _context.prev = 9;
+              case 10:
+                _context.prev = 10;
                 _context.t0 = _context["catch"](0);
+                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_4__.showErrorDialog)(_context.t0.response, 'Failed.');
 
-                if (_context.t0.response) {
-                  (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_4__.showErrorDialog)({
-                    message: _context.t0.response.data.payload.error
-                  });
-                } else {
-                  (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_4__.showErrorDialog)({
-                    message: 'Failed...'
-                  });
-                }
-
-              case 12:
+              case 13:
               case "end":
                 return _context.stop();
             }
           }
-        }, _callee, null, [[0, 9]]);
+        }, _callee, null, [[0, 10]]);
+      }))();
+    },
+
+    /* onAddPurchaseOrder */
+    onDelete: function onDelete(id) {
+      var _this2 = this;
+
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee2() {
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee2$(_context2) {
+          while (1) {
+            switch (_context2.prev = _context2.next) {
+              case 0:
+                _context2.prev = 0;
+                _context2.next = 3;
+                return _this2.$store.dispatch('pharmacyDrugs/deletePurchaseOrder', id);
+
+              case 3:
+                _context2.next = 5;
+                return _this2.$store.dispatch('pharmacyDrugs/fetchPurchaseOrdersByDrug', _this2.drugId);
+
+              case 5:
+                _this2.purchaseOrdersList = _context2.sent;
+
+                _this2.$emit('updated');
+
+                _context2.next = 12;
+                break;
+
+              case 9:
+                _context2.prev = 9;
+                _context2.t0 = _context2["catch"](0);
+                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_4__.showErrorDialog)(_context2.t0.response, 'Failed.');
+
+              case 12:
+              case "end":
+                return _context2.stop();
+            }
+          }
+        }, _callee2, null, [[0, 9]]);
       }))();
     }
+    /* onDelete */
+
   },
   mounted: function mounted() {
-    var _this2 = this;
+    var _this3 = this;
 
-    return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee2() {
-      return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee2$(_context2) {
+    return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee3() {
+      return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee3$(_context3) {
         while (1) {
-          switch (_context2.prev = _context2.next) {
+          switch (_context3.prev = _context3.next) {
             case 0:
-              _context2.prev = 0;
-              _context2.next = 3;
-              return _this2.$store.dispatch('pharmacyDrugs/fetchPurchaseOrdersByDrug', _this2.drugId);
+              _context3.prev = 0;
+              _context3.next = 3;
+              return _this3.$store.dispatch('pharmacyDrugs/fetchPurchaseOrdersByDrug', _this3.drugId);
 
             case 3:
-              _this2.purchaseOrdersList = _context2.sent;
-              _context2.next = 9;
+              _this3.purchaseOrdersList = _context3.sent;
+              _context3.next = 9;
               break;
 
             case 6:
-              _context2.prev = 6;
-              _context2.t0 = _context2["catch"](0);
-
-              if (_context2.t0.response) {
-                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_4__.showErrorDialog)({
-                  message: _context2.t0.response.data.payload.error
-                });
-              } else {
-                (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_4__.showErrorDialog)({
-                  message: 'Failed...'
-                });
-              }
+              _context3.prev = 6;
+              _context3.t0 = _context3["catch"](0);
+              (0,_helpers_common_js__WEBPACK_IMPORTED_MODULE_4__.showErrorDialog)(_context3.t0.response, 'Failed.');
 
             case 9:
             case "end":
-              return _context2.stop();
+              return _context3.stop();
           }
         }
-      }, _callee2, null, [[0, 6]]);
+      }, _callee3, null, [[0, 6]]);
     }))();
   }
 });
@@ -14268,7 +14446,7 @@ var pharmacyDrugsStore = {
     /**
      *
      * @param context
-     * @param params [drug_name, generic_name, brand_name]
+     * @param params [drug_name, generic_name, brand_name, min_quantity]
      */
     create: function create(context, params) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee3() {
@@ -14294,7 +14472,7 @@ var pharmacyDrugsStore = {
     /**
      *
      * @param context
-     * @param params [id, drug_name, generic_name, brand_name]
+     * @param params [id, drug_name, generic_name, brand_name, min_quantity]
      */
     update: function update(context, params) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee4() {
@@ -14346,19 +14524,7 @@ var pharmacyDrugsStore = {
         }, _callee5);
       }))();
     },
-
-    /*
-    ------------------
-    drug tags
-    ------------------
-    */
-
-    /**
-     *
-     * @param context
-     * @param id
-     */
-    fetchAllDrugTags: function fetchAllDrugTags(context, id) {
+    stats: function stats(context) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee6() {
         var response;
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee6$(_context6) {
@@ -14366,9 +14532,7 @@ var pharmacyDrugsStore = {
             switch (_context6.prev = _context6.next) {
               case 0:
                 _context6.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/all-tags.php', {
-                  drug_id: id
-                });
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/stats.php');
 
               case 2:
                 response = _context6.sent;
@@ -14383,24 +14547,34 @@ var pharmacyDrugsStore = {
       }))();
     },
 
+    /*
+    ------------------
+    drug tags
+    ------------------
+    */
+
     /**
      *
      * @param context
-     * @param params [drug_id, tag_id]
+     * @param id
      */
-    addDrugTag: function addDrugTag(context, params) {
+    fetchAllDrugTags: function fetchAllDrugTags(context, id) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee7() {
+        var response;
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee7$(_context7) {
           while (1) {
             switch (_context7.prev = _context7.next) {
               case 0:
                 _context7.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/add-tag.php', params);
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/all-tags.php', {
+                  drug_id: id
+                });
 
               case 2:
-                return _context7.abrupt("return", _context7.sent);
+                response = _context7.sent;
+                return _context7.abrupt("return", response.data.payload);
 
-              case 3:
+              case 4:
               case "end":
                 return _context7.stop();
             }
@@ -14412,18 +14586,16 @@ var pharmacyDrugsStore = {
     /**
      *
      * @param context
-     * @param id
+     * @param params [drug_id, tag_id]
      */
-    removeDrugTag: function removeDrugTag(context, id) {
+    addDrugTag: function addDrugTag(context, params) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee8() {
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee8$(_context8) {
           while (1) {
             switch (_context8.prev = _context8.next) {
               case 0:
                 _context8.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/remove-tag.php', {
-                  tag_id: id
-                });
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/add-tag.php', params);
 
               case 2:
                 return _context8.abrupt("return", _context8.sent);
@@ -14437,28 +14609,26 @@ var pharmacyDrugsStore = {
       }))();
     },
 
-    /*
-    ------------------
-    pharmacy tags
-    ------------------
-    */
-    fetchTag: function fetchTag(context, id) {
+    /**
+     *
+     * @param context
+     * @param id
+     */
+    removeDrugTag: function removeDrugTag(context, id) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee9() {
-        var response;
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee9$(_context9) {
           while (1) {
             switch (_context9.prev = _context9.next) {
               case 0:
                 _context9.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/get.php', {
-                  id: id
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/drugs/remove-tag.php', {
+                  tag_id: id
                 });
 
               case 2:
-                response = _context9.sent;
-                return _context9.abrupt("return", response.data.payload.data);
+                return _context9.abrupt("return", _context9.sent);
 
-              case 4:
+              case 3:
               case "end":
                 return _context9.stop();
             }
@@ -14466,7 +14636,13 @@ var pharmacyDrugsStore = {
         }, _callee9);
       }))();
     },
-    fetchAllTags: function fetchAllTags(context) {
+
+    /*
+    ------------------
+    pharmacy tags
+    ------------------
+    */
+    fetchTag: function fetchTag(context, id) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee10() {
         var response;
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee10$(_context10) {
@@ -14474,11 +14650,13 @@ var pharmacyDrugsStore = {
             switch (_context10.prev = _context10.next) {
               case 0:
                 _context10.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/all.php');
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/get.php', {
+                  id: id
+                });
 
               case 2:
                 response = _context10.sent;
-                return _context10.abrupt("return", response.data.payload);
+                return _context10.abrupt("return", response.data.payload.data);
 
               case 4:
               case "end":
@@ -14488,25 +14666,21 @@ var pharmacyDrugsStore = {
         }, _callee10);
       }))();
     },
-
-    /**
-     *
-     * @param context
-     * @param params [tag]
-     */
-    createTag: function createTag(context, params) {
+    fetchAllTags: function fetchAllTags(context) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee11() {
+        var response;
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee11$(_context11) {
           while (1) {
             switch (_context11.prev = _context11.next) {
               case 0:
                 _context11.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/create.php', params);
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/all.php');
 
               case 2:
-                return _context11.abrupt("return", _context11.sent);
+                response = _context11.sent;
+                return _context11.abrupt("return", response.data.payload);
 
-              case 3:
+              case 4:
               case "end":
                 return _context11.stop();
             }
@@ -14518,16 +14692,16 @@ var pharmacyDrugsStore = {
     /**
      *
      * @param context
-     * @param params [id, tag]
+     * @param params [tag]
      */
-    updateTag: function updateTag(context, params) {
+    createTag: function createTag(context, params) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee12() {
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee12$(_context12) {
           while (1) {
             switch (_context12.prev = _context12.next) {
               case 0:
                 _context12.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/update.php', params);
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/create.php', params);
 
               case 2:
                 return _context12.abrupt("return", _context12.sent);
@@ -14540,16 +14714,20 @@ var pharmacyDrugsStore = {
         }, _callee12);
       }))();
     },
-    deleteTag: function deleteTag(context, id) {
+
+    /**
+     *
+     * @param context
+     * @param params [id, tag]
+     */
+    updateTag: function updateTag(context, params) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee13() {
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee13$(_context13) {
           while (1) {
             switch (_context13.prev = _context13.next) {
               case 0:
                 _context13.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/delete.php', {
-                  id: id
-                });
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/update.php', params);
 
               case 2:
                 return _context13.abrupt("return", _context13.sent);
@@ -14562,6 +14740,28 @@ var pharmacyDrugsStore = {
         }, _callee13);
       }))();
     },
+    deleteTag: function deleteTag(context, id) {
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee14() {
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee14$(_context14) {
+          while (1) {
+            switch (_context14.prev = _context14.next) {
+              case 0:
+                _context14.next = 2;
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/delete.php', {
+                  id: id
+                });
+
+              case 2:
+                return _context14.abrupt("return", _context14.sent);
+
+              case 3:
+              case "end":
+                return _context14.stop();
+            }
+          }
+        }, _callee14);
+      }))();
+    },
 
     /**
      *
@@ -14569,27 +14769,27 @@ var pharmacyDrugsStore = {
      * @param id - drugId
      */
     findDrugsByTag: function findDrugsByTag(context, id) {
-      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee14() {
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee15() {
         var response;
-        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee14$(_context14) {
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee15$(_context15) {
           while (1) {
-            switch (_context14.prev = _context14.next) {
+            switch (_context15.prev = _context15.next) {
               case 0:
-                _context14.next = 2;
+                _context15.next = 2;
                 return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/tags/filter-by.php', {
                   id: id
                 });
 
               case 2:
-                response = _context14.sent;
-                return _context14.abrupt("return", response.data.payload);
+                response = _context15.sent;
+                return _context15.abrupt("return", response.data.payload);
 
               case 4:
               case "end":
-                return _context14.stop();
+                return _context15.stop();
             }
           }
-        }, _callee14);
+        }, _callee15);
       }))();
     },
 
@@ -14605,47 +14805,69 @@ var pharmacyDrugsStore = {
      * @param params [drug_id, order_date, quantity]
      */
     createPurchaseOrder: function createPurchaseOrder(context, params) {
-      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee15() {
-        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee15$(_context15) {
-          while (1) {
-            switch (_context15.prev = _context15.next) {
-              case 0:
-                _context15.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/po/create.php', params);
-
-              case 2:
-                return _context15.abrupt("return", _context15.sent);
-
-              case 3:
-              case "end":
-                return _context15.stop();
-            }
-          }
-        }, _callee15);
-      }))();
-    },
-    fetchPurchaseOrdersByDrug: function fetchPurchaseOrdersByDrug(context, drugId) {
       return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee16() {
-        var response;
         return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee16$(_context16) {
           while (1) {
             switch (_context16.prev = _context16.next) {
               case 0:
                 _context16.next = 2;
-                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/po/by-drug.php', {
-                  drug_id: drugId
-                });
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/po/create.php', params);
 
               case 2:
-                response = _context16.sent;
-                return _context16.abrupt("return", response.data.payload);
+                return _context16.abrupt("return", _context16.sent);
 
-              case 4:
+              case 3:
               case "end":
                 return _context16.stop();
             }
           }
         }, _callee16);
+      }))();
+    },
+    fetchPurchaseOrdersByDrug: function fetchPurchaseOrdersByDrug(context, drugId) {
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee17() {
+        var response;
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee17$(_context17) {
+          while (1) {
+            switch (_context17.prev = _context17.next) {
+              case 0:
+                _context17.next = 2;
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/po/by-drug.php', {
+                  drug_id: drugId
+                });
+
+              case 2:
+                response = _context17.sent;
+                return _context17.abrupt("return", response.data.payload);
+
+              case 4:
+              case "end":
+                return _context17.stop();
+            }
+          }
+        }, _callee17);
+      }))();
+    },
+    deletePurchaseOrder: function deletePurchaseOrder(context, id) {
+      return _asyncToGenerator( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().mark(function _callee18() {
+        return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_0___default().wrap(function _callee18$(_context18) {
+          while (1) {
+            switch (_context18.prev = _context18.next) {
+              case 0:
+                _context18.next = 2;
+                return axios__WEBPACK_IMPORTED_MODULE_1___default().post('pharmacy/po/delete.php', {
+                  id: id
+                });
+
+              case 2:
+                return _context18.abrupt("return", _context18.sent);
+
+              case 3:
+              case "end":
+                return _context18.stop();
+            }
+          }
+        }, _callee18);
       }))();
     }
   }
@@ -85116,23 +85338,50 @@ var render = function() {
                             "section__patient_details d-flex justify-content-between"
                         },
                         [
-                          _c("div", { staticClass: "d-flex flex-column" }, [
-                            _c("h2", {}, [
-                              _vm._v(_vm._s(_vm.patient.full_name))
-                            ]),
+                          _c("div", { staticClass: "d-flex gap-5" }, [
+                            _c(
+                              "div",
+                              {
+                                staticClass:
+                                  "d-flex flex-column align-items-center gap-2 bg-dark text-white p-3 rounded"
+                              },
+                              [
+                                _c("div", { staticClass: "lead" }, [
+                                  _vm._v("TOKEN")
+                                ]),
+                                _vm._v(" "),
+                                _c(
+                                  "div",
+                                  { staticClass: "token_number fw-bold" },
+                                  [
+                                    _vm._v(
+                                      "\n                  " +
+                                        _vm._s(_vm.appointment.token_number) +
+                                        "\n                "
+                                    )
+                                  ]
+                                )
+                              ]
+                            ),
                             _vm._v(" "),
-                            _c("div", { staticClass: "lead" }, [
-                              _vm._v(
-                                "DoB: " +
-                                  _vm._s(_vm.patient.dob) +
-                                  " (" +
-                                  _vm._s(_vm.patient.age) +
-                                  ")"
-                              )
-                            ]),
-                            _vm._v(" "),
-                            _c("div", {}, [
-                              _vm._v("Gender: " + _vm._s(_vm.patient.gender))
+                            _c("div", { staticClass: "d-flex flex-column" }, [
+                              _c("h2", {}, [
+                                _vm._v(_vm._s(_vm.patient.full_name))
+                              ]),
+                              _vm._v(" "),
+                              _c("div", { staticClass: "lead" }, [
+                                _vm._v(
+                                  "DoB: " +
+                                    _vm._s(_vm.patient.dob) +
+                                    " (" +
+                                    _vm._s(_vm.patient.age) +
+                                    ")"
+                                )
+                              ]),
+                              _vm._v(" "),
+                              _c("div", {}, [
+                                _vm._v("Gender: " + _vm._s(_vm.patient.gender))
+                              ])
                             ])
                           ]),
                           _vm._v(" "),
@@ -85227,26 +85476,7 @@ var render = function() {
                           },
                           [_vm._v("Missed")]
                         )
-                      ]),
-                      _vm._v(" "),
-                      _c(
-                        "div",
-                        {
-                          staticClass:
-                            "d-flex flex-column align-items-center gap-2"
-                        },
-                        [
-                          _c("div", { staticClass: "lead" }, [_vm._v("TOKEN")]),
-                          _vm._v(" "),
-                          _c("div", { staticClass: "token_number fw-bold" }, [
-                            _vm._v(
-                              "\n              " +
-                                _vm._s(_vm.appointment.token_number) +
-                                "\n            "
-                            )
-                          ])
-                        ]
-                      )
+                      ])
                     ]
                   ),
                   _vm._v(" "),
@@ -85501,7 +85731,7 @@ var render = function() {
                                 ],
                                 staticClass: "form-control",
                                 attrs: {
-                                  rows: "20",
+                                  rows: "10",
                                   disabled: _vm.formDisabled
                                 },
                                 domProps: {
@@ -85571,7 +85801,9 @@ var render = function() {
                 ],
                 1
               )
-            ])
+            ]),
+            _vm._v(" "),
+            _vm._m(0)
           ])
         : _c("div", { staticClass: "text-white text-center mt-5" }, [
             _c("h3", [_vm._v("Loading...")])
@@ -85612,7 +85844,16 @@ var render = function() {
     1
   )
 }
-var staticRenderFns = []
+var staticRenderFns = [
+  function() {
+    var _vm = this
+    var _h = _vm.$createElement
+    var _c = _vm._self._c || _h
+    return _c("div", { staticClass: "row" }, [
+      _c("div", { staticClass: "col" })
+    ])
+  }
+]
 render._withStripped = true
 
 
@@ -88667,7 +88908,7 @@ var staticRenderFns = [
     return _c("div", { staticClass: "row" }, [
       _c("div", { staticClass: "col" }, [
         _c("h2", { staticClass: "text-center text-white" }, [
-          _vm._v("Smart Clinic - BIT Project")
+          _vm._v("Smart Clinic")
         ]),
         _vm._v(" "),
         _c("hr")
@@ -89878,11 +90119,101 @@ var render = function() {
     "div",
     {},
     [
-      _c("CardSection", [
-        _vm._v(
-          "\n\n    Lorem ipsum dolor sit amet, consectetur adipisicing elit. Dignissimos eaque, error esse eum expedita hic illo ipsum iste maxime necessitatibus numquam\n    obcaecati placeat possimus quasi sint tempore unde veniam voluptatem?\n\n  "
-        )
-      ])
+      _c(
+        "CardSection",
+        {
+          scopedSlots: _vm._u([
+            {
+              key: "header",
+              fn: function() {
+                return [_vm._v("Drugs Low Threshold Warnings")]
+              },
+              proxy: true
+            }
+          ])
+        },
+        [
+          _vm._v(" "),
+          _vm.thresholdWarnings && _vm.thresholdWarnings.length > 0
+            ? _c("div", [
+                _c(
+                  "table",
+                  {
+                    staticClass: "table table-striped table-bordered table-sm"
+                  },
+                  [
+                    _c("thead", [
+                      _c("tr", [
+                        _c("th", [_vm._v("Drug")]),
+                        _vm._v(" "),
+                        _c(
+                          "th",
+                          {
+                            staticClass: "text-end",
+                            staticStyle: { width: "120px" }
+                          },
+                          [_vm._v("Avl. Qty")]
+                        ),
+                        _vm._v(" "),
+                        _c(
+                          "th",
+                          {
+                            staticClass: "text-end",
+                            staticStyle: { width: "120px" }
+                          },
+                          [_vm._v("Min. Thresh.")]
+                        )
+                      ])
+                    ]),
+                    _vm._v(" "),
+                    _c(
+                      "tbody",
+                      _vm._l(_vm.thresholdWarnings, function(item) {
+                        return _c("tr", [
+                          _c(
+                            "td",
+                            [
+                              _c(
+                                "router-link",
+                                {
+                                  attrs: {
+                                    to: {
+                                      name: "PageEditDrug",
+                                      params: { id: item.id }
+                                    }
+                                  }
+                                },
+                                [
+                                  _vm._v(
+                                    "\n              " +
+                                      _vm._s(item.drug_name) +
+                                      "\n            "
+                                  )
+                                ]
+                              )
+                            ],
+                            1
+                          ),
+                          _vm._v(" "),
+                          _c("td", { staticClass: "text-end" }, [
+                            _vm._v(_vm._s(item.total_count))
+                          ]),
+                          _vm._v(" "),
+                          _c("td", { staticClass: "text-end" }, [
+                            _vm._v(_vm._s(item.min_quantity))
+                          ])
+                        ])
+                      }),
+                      0
+                    )
+                  ]
+                )
+              ])
+            : _c("div", [
+                _vm._v("\n      There are no low threshold warnings.\n    ")
+              ])
+        ]
+      )
     ],
     1
   )
@@ -90022,7 +90353,7 @@ var render = function() {
         [
           _vm._v(" "),
           _c("div", {}, [
-            _c("div", { staticClass: "row" }, [
+            _c("div", { staticClass: "row g-2" }, [
               _c("div", { staticClass: "col" }, [
                 _c("div", { staticClass: "mb-3" }, [
                   _c("label", { staticClass: "form-label" }, [
@@ -90140,6 +90471,46 @@ var render = function() {
               ])
             ]),
             _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-4" }, [
+                _c("div", { staticClass: "mb-3" }, [
+                  _c("label", { staticClass: "form-label" }, [
+                    _vm._v("Minimum Quantity Threshold")
+                  ]),
+                  _vm._v(" "),
+                  _c("input", {
+                    directives: [
+                      {
+                        name: "model",
+                        rawName: "v-model.number",
+                        value: _vm.formSaveDrug.min_quantity,
+                        expression: "formSaveDrug.min_quantity",
+                        modifiers: { number: true }
+                      }
+                    ],
+                    staticClass: "form-control",
+                    attrs: { type: "number" },
+                    domProps: { value: _vm.formSaveDrug.min_quantity },
+                    on: {
+                      input: function($event) {
+                        if ($event.target.composing) {
+                          return
+                        }
+                        _vm.$set(
+                          _vm.formSaveDrug,
+                          "min_quantity",
+                          _vm._n($event.target.value)
+                        )
+                      },
+                      blur: function($event) {
+                        return _vm.$forceUpdate()
+                      }
+                    }
+                  })
+                ])
+              ])
+            ]),
+            _vm._v(" "),
             _c("div", { staticClass: "text-center" }, [
               _c(
                 "button",
@@ -90184,433 +90555,598 @@ var render = function() {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  return _c(
-    "div",
-    {},
-    [
-      _vm.editVisible
-        ? _c(
-            "CardSection",
-            {
-              staticClass: "mb-3",
-              scopedSlots: _vm._u(
+  return _vm.loaded
+    ? _c(
+        "div",
+        {},
+        [
+          _vm.editVisible
+            ? _c(
+                "CardSection",
+                {
+                  staticClass: "mb-3",
+                  scopedSlots: _vm._u(
+                    [
+                      {
+                        key: "header",
+                        fn: function() {
+                          return [
+                            _c(
+                              "div",
+                              { staticClass: "d-flex justify-content-between" },
+                              [
+                                _c("div", {}, [
+                                  _vm._v(
+                                    "\n          Edit " +
+                                      _vm._s(_vm.editDrug.drug_name) +
+                                      "\n        "
+                                  )
+                                ]),
+                                _vm._v(" "),
+                                _c("div", {}, [
+                                  _c(
+                                    "button",
+                                    {
+                                      staticClass: "btn btn-sm btn-secondary",
+                                      on: {
+                                        click: function($event) {
+                                          _vm.editVisible = false
+                                        }
+                                      }
+                                    },
+                                    [_c("i", { staticClass: "bi bi-x" })]
+                                  )
+                                ])
+                              ]
+                            )
+                          ]
+                        },
+                        proxy: true
+                      }
+                    ],
+                    null,
+                    false,
+                    2773710414
+                  )
+                },
                 [
-                  {
-                    key: "header",
-                    fn: function() {
-                      return [
-                        _c(
-                          "div",
-                          { staticClass: "d-flex justify-content-between" },
-                          [
-                            _c("div", {}, [
-                              _vm._v(
-                                "\n          Edit " +
-                                  _vm._s(_vm.editDrug.drug_name) +
-                                  "\n        "
-                              )
+                  _vm._v(" "),
+                  _c("div", {}, [
+                    _c("div", {}, [
+                      _c("div", { staticClass: "row" }, [
+                        _c("div", { staticClass: "col" }, [
+                          _c("div", { staticClass: "mb-3" }, [
+                            _c("label", { staticClass: "form-label" }, [
+                              _vm._v("Drug name")
                             ]),
                             _vm._v(" "),
-                            _c("div", {}, [
-                              _c(
-                                "button",
-                                {
-                                  staticClass: "btn btn-sm btn-secondary",
-                                  on: {
-                                    click: function($event) {
-                                      _vm.editVisible = false
-                                    }
-                                  }
-                                },
-                                [_c("i", { staticClass: "bi bi-x" })]
-                              )
-                            ])
-                          ]
-                        )
-                      ]
-                    },
-                    proxy: true
-                  }
-                ],
-                null,
-                false,
-                2773710414
-              )
-            },
-            [
-              _vm._v(" "),
-              _c("div", {}, [
-                _c("div", {}, [
-                  _c("div", { staticClass: "row" }, [
-                    _c("div", { staticClass: "col" }, [
-                      _c("div", { staticClass: "mb-3" }, [
-                        _c("label", { staticClass: "form-label" }, [
-                          _vm._v("Drug name")
-                        ]),
-                        _vm._v(" "),
-                        _c("input", {
-                          directives: [
-                            {
-                              name: "model",
-                              rawName: "v-model.trim",
-                              value: _vm.editDrug.drug_name,
-                              expression: "editDrug.drug_name",
-                              modifiers: { trim: true }
-                            }
-                          ],
-                          staticClass: "form-control",
-                          attrs: { type: "text" },
-                          domProps: { value: _vm.editDrug.drug_name },
-                          on: {
-                            input: function($event) {
-                              if ($event.target.composing) {
-                                return
-                              }
-                              _vm.$set(
-                                _vm.editDrug,
-                                "drug_name",
-                                $event.target.value.trim()
-                              )
-                            },
-                            blur: function($event) {
-                              return _vm.$forceUpdate()
-                            }
-                          }
-                        })
-                      ])
-                    ])
-                  ]),
-                  _vm._v(" "),
-                  _c("div", { staticClass: "row" }, [
-                    _c("div", { staticClass: "col" }, [
-                      _c("div", { staticClass: "mb-3" }, [
-                        _c("label", { staticClass: "form-label" }, [
-                          _vm._v("Generic name")
-                        ]),
-                        _vm._v(" "),
-                        _c("input", {
-                          directives: [
-                            {
-                              name: "model",
-                              rawName: "v-model.trim",
-                              value: _vm.editDrug.generic_name,
-                              expression: "editDrug.generic_name",
-                              modifiers: { trim: true }
-                            }
-                          ],
-                          staticClass: "form-control",
-                          attrs: { type: "text" },
-                          domProps: { value: _vm.editDrug.generic_name },
-                          on: {
-                            input: function($event) {
-                              if ($event.target.composing) {
-                                return
-                              }
-                              _vm.$set(
-                                _vm.editDrug,
-                                "generic_name",
-                                $event.target.value.trim()
-                              )
-                            },
-                            blur: function($event) {
-                              return _vm.$forceUpdate()
-                            }
-                          }
-                        })
-                      ])
-                    ]),
-                    _vm._v(" "),
-                    _c("div", { staticClass: "col" }, [
-                      _c("div", { staticClass: "mb-3" }, [
-                        _c("label", { staticClass: "form-label" }, [
-                          _vm._v("Brand name")
-                        ]),
-                        _vm._v(" "),
-                        _c("input", {
-                          directives: [
-                            {
-                              name: "model",
-                              rawName: "v-model.trim",
-                              value: _vm.editDrug.brand_name,
-                              expression: "editDrug.brand_name",
-                              modifiers: { trim: true }
-                            }
-                          ],
-                          staticClass: "form-control",
-                          attrs: { type: "text" },
-                          domProps: { value: _vm.editDrug.brand_name },
-                          on: {
-                            input: function($event) {
-                              if ($event.target.composing) {
-                                return
-                              }
-                              _vm.$set(
-                                _vm.editDrug,
-                                "brand_name",
-                                $event.target.value.trim()
-                              )
-                            },
-                            blur: function($event) {
-                              return _vm.$forceUpdate()
-                            }
-                          }
-                        })
-                      ])
-                    ])
-                  ]),
-                  _vm._v(" "),
-                  _c("div", { staticClass: "text-center" }, [
-                    _c(
-                      "button",
-                      {
-                        staticClass: "btn btn-primary",
-                        on: {
-                          click: function($event) {
-                            return _vm.onUpdate()
-                          }
-                        }
-                      },
-                      [_vm._v("Save")]
-                    )
-                  ])
-                ]),
-                _vm._v(" "),
-                _c("div", { staticClass: "alert alert-secondary p-2 mt-3" }, [
-                  _c(
-                    "div",
-                    { staticClass: "row justify-content-center mb-3" },
-                    [
-                      _c("div", { staticClass: "col-6" }, [
-                        _c("div", { staticClass: "input-group" }, [
-                          _c(
-                            "select",
-                            {
+                            _c("input", {
                               directives: [
                                 {
                                   name: "model",
-                                  rawName: "v-model",
-                                  value: _vm.selectedTag,
-                                  expression: "selectedTag"
+                                  rawName: "v-model.trim",
+                                  value: _vm.editDrug.drug_name,
+                                  expression: "editDrug.drug_name",
+                                  modifiers: { trim: true }
                                 }
                               ],
-                              staticClass: "form-select",
+                              staticClass: "form-control",
+                              attrs: { type: "text" },
+                              domProps: { value: _vm.editDrug.drug_name },
                               on: {
-                                change: function($event) {
-                                  var $$selectedVal = Array.prototype.filter
-                                    .call($event.target.options, function(o) {
-                                      return o.selected
-                                    })
-                                    .map(function(o) {
-                                      var val =
-                                        "_value" in o ? o._value : o.value
-                                      return val
-                                    })
-                                  _vm.selectedTag = $event.target.multiple
-                                    ? $$selectedVal
-                                    : $$selectedVal[0]
-                                }
-                              }
-                            },
-                            [
-                              _c(
-                                "option",
-                                {
-                                  attrs: { disabled: "" },
-                                  domProps: { value: null }
-                                },
-                                [_vm._v("CHOOSE TAG TO ADD")]
-                              ),
-                              _vm._v(" "),
-                              _vm._l(_vm.allTags, function(item) {
-                                return _c(
-                                  "option",
-                                  {
-                                    key: item.id,
-                                    domProps: { value: item.id }
-                                  },
-                                  [_vm._v(_vm._s(item.tag))]
-                                )
-                              })
-                            ],
-                            2
-                          ),
-                          _vm._v(" "),
-                          _c(
-                            "button",
-                            {
-                              staticClass: "btn btn-primary",
-                              on: {
-                                click: function($event) {
-                                  return _vm.onAddTag()
-                                }
-                              }
-                            },
-                            [_vm._v("Add")]
-                          )
-                        ])
-                      ])
-                    ]
-                  ),
-                  _vm._v(" "),
-                  _c("div", {}, [
-                    _c(
-                      "div",
-                      {
-                        staticClass:
-                          "d-flex flex-wrap gap-2 justify-content-center"
-                      },
-                      _vm._l(_vm.addedTags, function(item) {
-                        return _c("div", {}, [
-                          _c(
-                            "div",
-                            { staticClass: "input-group input-group-sm" },
-                            [
-                              _c(
-                                "span",
-                                { staticClass: "input-group-text bg-white" },
-                                [_vm._v(_vm._s(item.tag.tag))]
-                              ),
-                              _vm._v(" "),
-                              _c(
-                                "button",
-                                {
-                                  staticClass: "btn btn-outline-dark",
-                                  on: {
-                                    click: function($event) {
-                                      return _vm.onRemoveTag(item.id)
-                                    }
+                                input: function($event) {
+                                  if ($event.target.composing) {
+                                    return
                                   }
+                                  _vm.$set(
+                                    _vm.editDrug,
+                                    "drug_name",
+                                    $event.target.value.trim()
+                                  )
                                 },
-                                [_c("i", { staticClass: "bi bi-x" })]
-                              )
-                            ]
-                          )
+                                blur: function($event) {
+                                  return _vm.$forceUpdate()
+                                }
+                              }
+                            })
+                          ])
                         ])
-                      }),
-                      0
-                    )
-                  ])
-                ])
-              ])
-            ]
-          )
-        : _vm._e(),
-      _vm._v(" "),
-      !_vm.editVisible
-        ? _c(
-            "CardSection",
-            {
-              staticClass: "mb-3",
-              scopedSlots: _vm._u(
-                [
-                  {
-                    key: "header",
-                    fn: function() {
-                      return [
-                        _c(
-                          "div",
-                          { staticClass: "d-flex justify-content-between" },
-                          [
-                            _c("div", {}, [
-                              _vm._v(
-                                "\n          " +
-                                  _vm._s(_vm.editDrug.drug_name) +
-                                  "\n        "
-                              )
+                      ]),
+                      _vm._v(" "),
+                      _c("div", { staticClass: "row g-2" }, [
+                        _c("div", { staticClass: "col" }, [
+                          _c("div", { staticClass: "mb-3" }, [
+                            _c("label", { staticClass: "form-label" }, [
+                              _vm._v("G.N")
                             ]),
                             _vm._v(" "),
-                            _c("div", {}, [
-                              _c(
-                                "button",
+                            _c("input", {
+                              directives: [
                                 {
-                                  staticClass: "btn btn-sm btn-secondary",
-                                  on: {
-                                    click: function($event) {
-                                      _vm.editVisible = true
-                                    }
+                                  name: "model",
+                                  rawName: "v-model.trim",
+                                  value: _vm.editDrug.generic_name,
+                                  expression: "editDrug.generic_name",
+                                  modifiers: { trim: true }
+                                }
+                              ],
+                              staticClass: "form-control",
+                              attrs: { type: "text" },
+                              domProps: { value: _vm.editDrug.generic_name },
+                              on: {
+                                input: function($event) {
+                                  if ($event.target.composing) {
+                                    return
                                   }
+                                  _vm.$set(
+                                    _vm.editDrug,
+                                    "generic_name",
+                                    $event.target.value.trim()
+                                  )
                                 },
-                                [_c("i", { staticClass: "bi bi-pencil-fill" })]
-                              )
-                            ])
-                          ]
-                        )
-                      ]
-                    },
-                    proxy: true
-                  }
-                ],
-                null,
-                false,
-                3061558782
-              )
-            },
-            [
-              _vm._v(" "),
-              _c("div", { staticClass: "row g-2 mb-3" }, [
-                _c("div", { staticClass: "col" }, [
-                  _c("div", { staticClass: "input-group" }, [
-                    _c("span", { staticClass: "input-group-text" }, [
-                      _vm._v("Generic Name")
-                    ]),
-                    _vm._v(" "),
-                    _c("input", {
-                      staticClass: "form-control bg-white",
-                      attrs: { type: "text", disabled: "" },
-                      domProps: { value: _vm.editDrug.generic_name }
-                    })
-                  ])
-                ]),
-                _vm._v(" "),
-                _c("div", { staticClass: "col" }, [
-                  _c("div", { staticClass: "input-group" }, [
-                    _c("span", { staticClass: "input-group-text" }, [
-                      _vm._v("Brand Name")
-                    ]),
-                    _vm._v(" "),
-                    _c("input", {
-                      staticClass: "form-control bg-white",
-                      attrs: { type: "text", disabled: "" },
-                      domProps: { value: _vm.editDrug.brand_name }
-                    })
-                  ])
-                ])
-              ]),
-              _vm._v(" "),
-              _c("div", { staticClass: "row" }, [
-                _c("div", { staticClass: "col" }, [
-                  _c("div", [_vm._v("Tags")]),
-                  _vm._v(" "),
-                  _c(
-                    "div",
-                    { staticClass: "d-flex flex-wrap gap-2" },
-                    _vm._l(_vm.addedTags, function(item) {
-                      return _c("div", {}, [
+                                blur: function($event) {
+                                  return _vm.$forceUpdate()
+                                }
+                              }
+                            })
+                          ])
+                        ]),
+                        _vm._v(" "),
+                        _c("div", { staticClass: "col" }, [
+                          _c("div", { staticClass: "mb-3" }, [
+                            _c("label", { staticClass: "form-label" }, [
+                              _vm._v("B.N")
+                            ]),
+                            _vm._v(" "),
+                            _c("input", {
+                              directives: [
+                                {
+                                  name: "model",
+                                  rawName: "v-model.trim",
+                                  value: _vm.editDrug.brand_name,
+                                  expression: "editDrug.brand_name",
+                                  modifiers: { trim: true }
+                                }
+                              ],
+                              staticClass: "form-control",
+                              attrs: { type: "text" },
+                              domProps: { value: _vm.editDrug.brand_name },
+                              on: {
+                                input: function($event) {
+                                  if ($event.target.composing) {
+                                    return
+                                  }
+                                  _vm.$set(
+                                    _vm.editDrug,
+                                    "brand_name",
+                                    $event.target.value.trim()
+                                  )
+                                },
+                                blur: function($event) {
+                                  return _vm.$forceUpdate()
+                                }
+                              }
+                            })
+                          ])
+                        ]),
+                        _vm._v(" "),
+                        _c("div", { staticClass: "col" }, [
+                          _c("div", { staticClass: "mb-3" }, [
+                            _c("label", { staticClass: "form-label" }, [
+                              _vm._v("Min.")
+                            ]),
+                            _vm._v(" "),
+                            _c("input", {
+                              directives: [
+                                {
+                                  name: "model",
+                                  rawName: "v-model.trim",
+                                  value: _vm.editDrug.min_quantity,
+                                  expression: "editDrug.min_quantity",
+                                  modifiers: { trim: true }
+                                }
+                              ],
+                              staticClass: "form-control",
+                              attrs: { type: "text" },
+                              domProps: { value: _vm.editDrug.min_quantity },
+                              on: {
+                                input: function($event) {
+                                  if ($event.target.composing) {
+                                    return
+                                  }
+                                  _vm.$set(
+                                    _vm.editDrug,
+                                    "min_quantity",
+                                    $event.target.value.trim()
+                                  )
+                                },
+                                blur: function($event) {
+                                  return _vm.$forceUpdate()
+                                }
+                              }
+                            })
+                          ])
+                        ])
+                      ]),
+                      _vm._v(" "),
+                      _c("div", { staticClass: "text-center" }, [
                         _c(
-                          "div",
-                          { staticClass: "input-group input-group-sm" },
-                          [
-                            _c(
-                              "span",
-                              { staticClass: "input-group-text bg-white" },
-                              [_vm._v(_vm._s(item.tag.tag))]
-                            )
-                          ]
+                          "button",
+                          {
+                            staticClass: "btn btn-primary",
+                            on: {
+                              click: function($event) {
+                                return _vm.onUpdate()
+                              }
+                            }
+                          },
+                          [_vm._v("Save")]
                         )
                       ])
-                    }),
-                    0
+                    ]),
+                    _vm._v(" "),
+                    _c(
+                      "div",
+                      { staticClass: "alert alert-secondary p-2 mt-3" },
+                      [
+                        _c(
+                          "div",
+                          { staticClass: "row justify-content-center mb-3" },
+                          [
+                            _c("div", { staticClass: "col-6" }, [
+                              _c("div", { staticClass: "input-group" }, [
+                                _c(
+                                  "select",
+                                  {
+                                    directives: [
+                                      {
+                                        name: "model",
+                                        rawName: "v-model",
+                                        value: _vm.selectedTag,
+                                        expression: "selectedTag"
+                                      }
+                                    ],
+                                    staticClass: "form-select",
+                                    on: {
+                                      change: function($event) {
+                                        var $$selectedVal = Array.prototype.filter
+                                          .call($event.target.options, function(
+                                            o
+                                          ) {
+                                            return o.selected
+                                          })
+                                          .map(function(o) {
+                                            var val =
+                                              "_value" in o ? o._value : o.value
+                                            return val
+                                          })
+                                        _vm.selectedTag = $event.target.multiple
+                                          ? $$selectedVal
+                                          : $$selectedVal[0]
+                                      }
+                                    }
+                                  },
+                                  [
+                                    _c(
+                                      "option",
+                                      {
+                                        attrs: { disabled: "" },
+                                        domProps: { value: null }
+                                      },
+                                      [_vm._v("CHOOSE TAG TO ADD")]
+                                    ),
+                                    _vm._v(" "),
+                                    _vm._l(_vm.allTags, function(item) {
+                                      return _c(
+                                        "option",
+                                        {
+                                          key: item.id,
+                                          domProps: { value: item.id }
+                                        },
+                                        [_vm._v(_vm._s(item.tag))]
+                                      )
+                                    })
+                                  ],
+                                  2
+                                ),
+                                _vm._v(" "),
+                                _c(
+                                  "button",
+                                  {
+                                    staticClass: "btn btn-primary",
+                                    on: {
+                                      click: function($event) {
+                                        return _vm.onAddTag()
+                                      }
+                                    }
+                                  },
+                                  [_vm._v("Add")]
+                                )
+                              ])
+                            ])
+                          ]
+                        ),
+                        _vm._v(" "),
+                        _c("div", {}, [
+                          _c(
+                            "div",
+                            {
+                              staticClass:
+                                "d-flex flex-wrap gap-2 justify-content-center"
+                            },
+                            _vm._l(_vm.addedTags, function(item) {
+                              return _c("div", {}, [
+                                _c(
+                                  "div",
+                                  { staticClass: "input-group input-group-sm" },
+                                  [
+                                    _c(
+                                      "span",
+                                      {
+                                        staticClass: "input-group-text bg-white"
+                                      },
+                                      [_vm._v(_vm._s(item.tag.tag))]
+                                    ),
+                                    _vm._v(" "),
+                                    _c(
+                                      "button",
+                                      {
+                                        staticClass: "btn btn-outline-dark",
+                                        on: {
+                                          click: function($event) {
+                                            return _vm.onRemoveTag(item.id)
+                                          }
+                                        }
+                                      },
+                                      [_c("i", { staticClass: "bi bi-x" })]
+                                    )
+                                  ]
+                                )
+                              ])
+                            }),
+                            0
+                          )
+                        ])
+                      ]
+                    )
+                  ])
+                ]
+              )
+            : _vm._e(),
+          _vm._v(" "),
+          !_vm.editVisible
+            ? _c(
+                "CardSection",
+                {
+                  staticClass: "mb-3",
+                  scopedSlots: _vm._u(
+                    [
+                      {
+                        key: "header",
+                        fn: function() {
+                          return [
+                            _c(
+                              "div",
+                              { staticClass: "d-flex justify-content-between" },
+                              [
+                                _c("div", {}, [
+                                  _vm._v(
+                                    "\n          " +
+                                      _vm._s(_vm.editDrug.drug_name) +
+                                      "\n        "
+                                  )
+                                ]),
+                                _vm._v(" "),
+                                _c("div", {}, [
+                                  _c(
+                                    "button",
+                                    {
+                                      staticClass: "btn btn-sm btn-secondary",
+                                      on: {
+                                        click: function($event) {
+                                          _vm.editVisible = true
+                                        }
+                                      }
+                                    },
+                                    [
+                                      _c("i", {
+                                        staticClass: "bi bi-pencil-fill"
+                                      })
+                                    ]
+                                  )
+                                ])
+                              ]
+                            )
+                          ]
+                        },
+                        proxy: true
+                      }
+                    ],
+                    null,
+                    false,
+                    3061558782
                   )
-                ])
-              ])
-            ]
-          )
-        : _vm._e(),
-      _vm._v(" "),
-      _c("DrugPurchaseOrders", { attrs: { "drug-id": _vm.drugId } })
-    ],
-    1
-  )
+                },
+                [
+                  _vm._v(" "),
+                  _c("div", { staticClass: "row g-2 mb-3" }, [
+                    _c("div", { staticClass: "col" }, [
+                      _c("div", { staticClass: "input-group" }, [
+                        _c("span", { staticClass: "input-group-text" }, [
+                          _vm._v("G.N")
+                        ]),
+                        _vm._v(" "),
+                        _c("input", {
+                          staticClass: "form-control bg-white",
+                          attrs: { type: "text", disabled: "" },
+                          domProps: { value: _vm.editDrug.generic_name }
+                        })
+                      ])
+                    ]),
+                    _vm._v(" "),
+                    _c("div", { staticClass: "col" }, [
+                      _c("div", { staticClass: "input-group" }, [
+                        _c("span", { staticClass: "input-group-text" }, [
+                          _vm._v("B.N")
+                        ]),
+                        _vm._v(" "),
+                        _c("input", {
+                          staticClass: "form-control bg-white",
+                          attrs: { type: "text", disabled: "" },
+                          domProps: { value: _vm.editDrug.brand_name }
+                        })
+                      ])
+                    ])
+                  ]),
+                  _vm._v(" "),
+                  _c("div", { staticClass: "row g-2 mb-3" }, [
+                    _c("div", { staticClass: "col" }, [
+                      _c("div", { staticClass: "input-group" }, [
+                        _c("span", { staticClass: "input-group-text" }, [
+                          _vm._v("Available")
+                        ]),
+                        _vm._v(" "),
+                        _c("input", {
+                          directives: [
+                            {
+                              name: "model",
+                              rawName: "v-model.trim",
+                              value: _vm.editDrug.total_count,
+                              expression: "editDrug.total_count",
+                              modifiers: { trim: true }
+                            }
+                          ],
+                          staticClass: "form-control",
+                          attrs: { type: "text" },
+                          domProps: { value: _vm.editDrug.total_count },
+                          on: {
+                            input: function($event) {
+                              if ($event.target.composing) {
+                                return
+                              }
+                              _vm.$set(
+                                _vm.editDrug,
+                                "total_count",
+                                $event.target.value.trim()
+                              )
+                            },
+                            blur: function($event) {
+                              return _vm.$forceUpdate()
+                            }
+                          }
+                        })
+                      ])
+                    ]),
+                    _vm._v(" "),
+                    _c("div", { staticClass: "col" }, [
+                      _c("div", { staticClass: "input-group" }, [
+                        _c("span", { staticClass: "input-group-text" }, [
+                          _vm._v("Min.Threshold")
+                        ]),
+                        _vm._v(" "),
+                        _c("input", {
+                          directives: [
+                            {
+                              name: "model",
+                              rawName: "v-model.trim",
+                              value: _vm.editDrug.min_quantity,
+                              expression: "editDrug.min_quantity",
+                              modifiers: { trim: true }
+                            }
+                          ],
+                          staticClass: "form-control",
+                          attrs: { type: "text" },
+                          domProps: { value: _vm.editDrug.min_quantity },
+                          on: {
+                            input: function($event) {
+                              if ($event.target.composing) {
+                                return
+                              }
+                              _vm.$set(
+                                _vm.editDrug,
+                                "min_quantity",
+                                $event.target.value.trim()
+                              )
+                            },
+                            blur: function($event) {
+                              return _vm.$forceUpdate()
+                            }
+                          }
+                        })
+                      ])
+                    ])
+                  ]),
+                  _vm._v(" "),
+                  _vm.addedTags.length > 0
+                    ? _c("div", { staticClass: "row mb-3" }, [
+                        _c("div", { staticClass: "col" }, [
+                          _c("div", [_vm._v("Tags")]),
+                          _vm._v(" "),
+                          _c(
+                            "div",
+                            { staticClass: "d-flex flex-wrap gap-2" },
+                            _vm._l(_vm.addedTags, function(item) {
+                              return _c("div", {}, [
+                                _c(
+                                  "div",
+                                  { staticClass: "input-group input-group-sm" },
+                                  [
+                                    _c(
+                                      "span",
+                                      {
+                                        staticClass: "input-group-text bg-white"
+                                      },
+                                      [_vm._v(_vm._s(item.tag.tag))]
+                                    )
+                                  ]
+                                )
+                              ])
+                            }),
+                            0
+                          )
+                        ])
+                      ])
+                    : _vm._e(),
+                  _vm._v(" "),
+                  _vm.lowQuantityWarning
+                    ? _c(
+                        "div",
+                        { staticClass: "alert alert-danger text-center" },
+                        [
+                          _c("div", { staticClass: "text-center" }, [
+                            _c("i", {
+                              staticClass: "bi bi-exclamation-triangle-fill",
+                              staticStyle: { "font-size": "48px" }
+                            })
+                          ]),
+                          _vm._v(" "),
+                          _c("p", { staticClass: "lead" }, [
+                            _vm._v(
+                              "Stock quantity available is lower than minimum quantity threshold."
+                            )
+                          ]),
+                          _vm._v(" "),
+                          _c("p", [
+                            _vm._v(
+                              "Available Quantity: " +
+                                _vm._s(_vm.editDrug.total_count)
+                            )
+                          ])
+                        ]
+                      )
+                    : _vm._e()
+                ]
+              )
+            : _vm._e(),
+          _vm._v(" "),
+          _c("DrugPurchaseOrders", {
+            attrs: { "drug-id": _vm.drugId },
+            on: { updated: _vm.fetchDrugDetails }
+          })
+        ],
+        1
+      )
+    : _vm._e()
 }
 var staticRenderFns = []
 render._withStripped = true
@@ -90869,6 +91405,15 @@ var render = function() {
                         _vm._v(" "),
                         _c("th", [_vm._v("Brand Name")]),
                         _vm._v(" "),
+                        _c(
+                          "th",
+                          {
+                            staticClass: "text-end",
+                            staticStyle: { width: "120px" }
+                          },
+                          [_vm._v("Total Count")]
+                        ),
+                        _vm._v(" "),
                         _c("th", [_vm._v("Tags")])
                       ])
                     ]),
@@ -90905,6 +91450,10 @@ var render = function() {
                           _c("td", [_vm._v(_vm._s(item.generic_name))]),
                           _vm._v(" "),
                           _c("td", [_vm._v(_vm._s(item.brand_name))]),
+                          _vm._v(" "),
+                          _c("td", { staticClass: "text-end" }, [
+                            _vm._v(_vm._s(item.total_count))
+                          ]),
                           _vm._v(" "),
                           _c(
                             "td",
@@ -91013,7 +91562,16 @@ var render = function() {
                     _c("tr", [
                       _c("th", [_vm._v("Date")]),
                       _vm._v(" "),
-                      _c("th", [_vm._v("Quantity")])
+                      _c(
+                        "th",
+                        {
+                          staticClass: "text-end",
+                          staticStyle: { width: "150px" }
+                        },
+                        [_vm._v("Quantity")]
+                      ),
+                      _vm._v(" "),
+                      _c("th", { staticStyle: { width: "10px" } })
                     ])
                   ]),
                   _vm._v(" "),
@@ -91021,9 +91579,28 @@ var render = function() {
                     "tbody",
                     _vm._l(_vm.purchaseOrdersList, function(item) {
                       return _c("tr", { key: item.id }, [
-                        _c("td", [_vm._v(_vm._s(item.order_date))]),
+                        _c("td", { staticClass: "align-middle" }, [
+                          _vm._v(_vm._s(item.order_date))
+                        ]),
                         _vm._v(" "),
-                        _c("td", [_vm._v(_vm._s(item.quantity))])
+                        _c("td", { staticClass: "text-end align-middle" }, [
+                          _vm._v(_vm._s(item.quantity))
+                        ]),
+                        _vm._v(" "),
+                        _c("td", [
+                          _c(
+                            "button",
+                            {
+                              staticClass: "btn btn-sm btn-outline-danger",
+                              on: {
+                                click: function($event) {
+                                  return _vm.onDelete(item.id)
+                                }
+                              }
+                            },
+                            [_c("i", { staticClass: "bi bi-trash-fill" })]
+                          )
+                        ])
                       ])
                     }),
                     0

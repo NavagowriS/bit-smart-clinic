@@ -19,9 +19,6 @@ class ClinicPatient implements IModel
     public ?Patient $patient;
 
 
-    /** @var ClinicVisitPatient[]|null */
-    public ?array $visit_details;
-
     /** @var ClinicAppointment[]|null */
     public ?array $appointments;
 
@@ -49,7 +46,6 @@ class ClinicPatient implements IModel
             $result->patient = Patient::find( $result->patient_id );
             $result->clinic = Clinic::find( $result->clinic_id );
 
-            $result->visit_details = self::getAllClinicVisitDetails( $id );
             $result->appointments = self::getAllAppointments( $id );
 
             return $result;
@@ -65,7 +61,7 @@ class ClinicPatient implements IModel
     }
 
 
-    public function insert()
+    public function insert(): int
     {
         $data = [
             "clinic_id" => $this->clinic_id,
@@ -137,26 +133,26 @@ class ClinicPatient implements IModel
     }
 
 
-    public static function getAllClinicVisitDetails( int $clinicPatientId ): array
-    {
-
-        $db = Database::instance();
-
-        $statement = $db->prepare( 'SELECT cp.*, cv.visit_date FROM clinic_visit_patients cp
-                                        INNER JOIN clinic_visits cv ON cp.clinic_visit_id = cv.id 
-                                        WHERE cp.clinic_patient_id=?;' );
-
-        $statement->execute( [ $clinicPatientId ] );
-
-        /** @var ClinicVisitPatient[] $results */
-        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
-
-        if ( !empty( $results ) ) {
-            return $results;
-        }
-
-        return [];
-    }
+//    public static function getAllClinicVisitDetails( int $clinicPatientId ): array
+//    {
+//
+//        $db = Database::instance();
+//
+//        $statement = $db->prepare( 'SELECT cp.*, cv.visit_date FROM clinic_visit_patients cp
+//                                        INNER JOIN clinic_visits cv ON cp.clinic_visit_id = cv.id
+//                                        WHERE cp.clinic_patient_id=?;' );
+//
+//        $statement->execute( [ $clinicPatientId ] );
+//
+//        /** @var ClinicVisitPatient[] $results */
+//        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+//
+//        if ( !empty( $results ) ) {
+//            return $results;
+//        }
+//
+//        return [];
+//    }
 
     public static function getAllAppointments( int $clinicPatientId ): array
     {

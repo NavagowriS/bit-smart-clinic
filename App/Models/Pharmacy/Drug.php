@@ -4,14 +4,16 @@ namespace App\Models\Pharmacy;
 
 use App\Core\Database\Database;
 use App\Models\IModel;
+use Exception;
 use PDO;
+use stdClass;
 
 class Drug implements IModel
 {
 
     private const TABLE = 'pharma_drugs';
 
-    public ?int $id;
+    public ?int $id, $total_count, $min_quantity;
     public ?string $drug_name, $generic_name, $brand_name;
 
     /** @var DrugsTag[] */
@@ -37,6 +39,7 @@ class Drug implements IModel
         $result = Database::find( self::TABLE, $id, self::class );
 
         if ( !empty( $result ) ) {
+            $result->total_count = Drug::getCount( $result );
             return $result;
         }
         return null;
@@ -50,6 +53,7 @@ class Drug implements IModel
         if ( !empty( $results ) ) {
             foreach ( $results as $result ) {
                 $result->drugTags = DrugsTag::findByDrug( $result );
+                $result->total_count = Drug::getCount( $result );
             }
             return $results;
         }
@@ -57,12 +61,19 @@ class Drug implements IModel
         return [];
     }
 
+    /**
+     * @throws Exception
+     */
     public function insert(): int
     {
+
+        if ( $this->exists() ) throw new Exception( 'Drug already exist' );
+
         $data = [
             'drug_name' => $this->drug_name,
             'generic_name' => $this->generic_name,
             'brand_name' => $this->brand_name,
+            'min_quantity' => $this->min_quantity,
         ];
 
         return Database::insert( self::TABLE, $data );
@@ -74,6 +85,7 @@ class Drug implements IModel
             'drug_name' => $this->drug_name,
             'generic_name' => $this->generic_name,
             'brand_name' => $this->brand_name,
+            'min_quantity' => $this->min_quantity,
         ];
 
         return Database::update( self::TABLE, $data, [ 'id' => $this->id ] );
@@ -97,6 +109,7 @@ class Drug implements IModel
         if ( !empty( $results ) ) {
             foreach ( $results as $result ) {
                 $result->drugTags = DrugsTag::findByDrug( $result );
+                $result->total_count = Drug::getCount( $result );
             }
             return $results;
         }
@@ -104,5 +117,34 @@ class Drug implements IModel
         return [];
     }
 
+    public static function getCount( Drug $drug ): int
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'select sum(quantity) as total from pharma_drug_po where drug_id=?' );
+
+        $statement->execute( [ $drug->id ] );
+
+        $result = $statement->fetchObject( stdClass::class );
+
+        if ( !empty( $result->total ) ) return $result->total;
+
+        return 0;
+
+    }
+
+
+    public function exists(): bool
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'select * from pharma_drugs where drug_name = ? limit 1' );
+
+        $statement->execute( [ $this->drug_name ] );
+
+        $result = $statement->fetchObject( self::class );
+
+        if ( !empty( $result ) ) return true;
+        return false;
+
+    }
 
 }

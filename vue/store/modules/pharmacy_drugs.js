@@ -27,7 +27,7 @@ export const pharmacyDrugsStore = {
         /**
          *
          * @param context
-         * @param params [drug_name, generic_name, brand_name]
+         * @param params [drug_name, generic_name, brand_name, min_quantity]
          */
         async create( context, params ) {
             return await axios.post( 'pharmacy/drugs/create.php', params );
@@ -36,7 +36,7 @@ export const pharmacyDrugsStore = {
         /**
          *
          * @param context
-         * @param params [id, drug_name, generic_name, brand_name]
+         * @param params [id, drug_name, generic_name, brand_name, min_quantity]
          */
         async update( context, params ) {
             return await axios.post( 'pharmacy/drugs/update.php', params );
@@ -49,6 +49,11 @@ export const pharmacyDrugsStore = {
          */
         async search( context, keyword ) {
             const response = await axios.post( 'pharmacy/drugs/search.php', { keyword: keyword } );
+            return response.data.payload;
+        },
+
+        async stats( context ) {
+            const response = await axios.post( 'pharmacy/drugs/stats.php' );
             return response.data.payload;
         },
 
@@ -155,6 +160,10 @@ export const pharmacyDrugsStore = {
         async fetchPurchaseOrdersByDrug( context, drugId ) {
             const response = await axios.post( 'pharmacy/po/by-drug.php', { drug_id: drugId } );
             return response.data.payload;
+        },
+
+        async deletePurchaseOrder( context, id ) {
+            return await axios.post( 'pharmacy/po/delete.php', { id: id } );
         },
 
 

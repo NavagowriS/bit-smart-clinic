@@ -14,13 +14,19 @@
         <thead>
         <tr>
           <th>Date</th>
-          <th>Quantity</th>
+          <th style="width: 150px" class="text-end">Quantity</th>
+          <th style="width: 10px"></th>
         </tr>
         </thead>
         <tbody>
         <tr v-for="item in purchaseOrdersList" :key="item.id">
-          <td>{{ item.order_date }}</td>
-          <td>{{ item.quantity }}</td>
+          <td class="align-middle">{{ item.order_date }}</td>
+          <td class="text-end align-middle">{{ item.quantity }}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-danger" @click="onDelete(item.id)">
+              <i class="bi bi-trash-fill"></i>
+            </button>
+          </td>
         </tr>
         </tbody>
       </table>
@@ -105,15 +111,27 @@ export default {
 
         this.$refs.modal_add_purchase_order.close();
 
+        this.$emit( 'updated' );
+
       } catch ( e ) {
-        if ( e.response ) {
-          showErrorDialog( { message: e.response.data.payload.error } );
-        } else {
-          showErrorDialog( { message: 'Failed...' } );
-        }
+        showErrorDialog( e.response, 'Failed.' );
       }
 
-    },
+    }, /* onAddPurchaseOrder */
+
+    async onDelete( id ) {
+      try {
+
+        await this.$store.dispatch( 'pharmacyDrugs/deletePurchaseOrder', id );
+
+        this.purchaseOrdersList = await this.$store.dispatch( 'pharmacyDrugs/fetchPurchaseOrdersByDrug', this.drugId );
+
+        this.$emit( 'updated' );
+
+      } catch ( e ) {
+        showErrorDialog( e.response, 'Failed.' );
+      }
+    }, /* onDelete */
 
   },
 
@@ -122,11 +140,7 @@ export default {
     try {
       this.purchaseOrdersList = await this.$store.dispatch( 'pharmacyDrugs/fetchPurchaseOrdersByDrug', this.drugId );
     } catch ( e ) {
-      if ( e.response ) {
-        showErrorDialog( { message: e.response.data.payload.error } );
-      } else {
-        showErrorDialog( { message: 'Failed...' } );
-      }
+      showErrorDialog( e.response, 'Failed.' );
     }
 
   },

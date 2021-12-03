@@ -4,8 +4,7 @@ declare( strict_types=1 );
 use App\Core\Http\Auth;
 use App\Core\Http\JSONResponse;
 use App\Core\Http\Request;
-use App\Models\Pharmacy\Drug;
-use App\Models\Pharmacy\DrugsTag;
+use App\Models\Pharmacy\DrugPurchaseOrder;
 
 require_once "../../../../bootstrap.php";
 
@@ -19,17 +18,19 @@ try {
 
 
     $fields = [
-        "drug_id" => Request::getAsInteger( "drug_id", true ),
+        "id" => Request::getAsString( "id", true ),
     ];
 
-    $drug = Drug::find( $fields[ 'drug_id' ] );
+    $purchaseOrder = DrugPurchaseOrder::build( $fields );
 
-    if ( empty( $drug ) ) throw new Exception( 'Invalid drug' );
+    $result = $purchaseOrder->delete();
 
-    $drugTags = DrugsTag::findByDrug( $drug );
+    if ( $result ) {
+        JSONResponse::validResponse();
+        return;
+    }
 
-    JSONResponse::validResponse( $drugTags );
-    return;
+    throw new Exception( 'Failed to delete the purchase order' );
 
 } catch ( Exception $exception ) {
     JSONResponse::exceptionResponse( $exception );
