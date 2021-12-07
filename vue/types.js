@@ -163,3 +163,13 @@
  * @property {PharmacyTag} tag
  * @property {Drug} drug
  */
+
+/**
+ * @typedef {Object} Prescription
+ * @property {number} id
+ * @property {number} appointment_id
+ * @property {string} prescription_date
+ * @property {string} remarks
+ * @property {string} status
+ * @property {ClinicAppointment} appointment
+ */

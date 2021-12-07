@@ -61,7 +61,7 @@
 
 
           <!-- CARD: Visit details -->
-          <CardSection class="mb-5">
+          <CardSection class="mb-3">
 
             <template v-slot:header>Visit details</template>
 
@@ -147,11 +147,10 @@
 
 
       <!-- section: prescription -->
-      <div class="row">
-        <div class="col">
+      <AddPrescription :appointment="appointment"/>
 
-        </div><!-- col -->
-      </div><!-- row -->
+      <div style="margin-bottom: 20rem"></div>
+
 
     </div><!-- container -->
     <div class="text-white text-center mt-5" v-else>
@@ -184,11 +183,12 @@ import CardSection from '@/components/CardSection.vue';
 import ModalWindow from '@/components/ModalWindow.vue';
 import TopNavigationBar from '@/components/TopNavigationBar.vue';
 import {showErrorDialog} from '@/helpers/common.js';
+import AddPrescription from '@/views/clinics/appointments/components/AddPrescription.vue';
 import _ from 'lodash';
 
 export default {
   name: 'PageSingleAppointment',
-  components: { ModalWindow, CardSection, TopNavigationBar },
+  components: { AddPrescription, ModalWindow, CardSection, TopNavigationBar },
 
   data() {
     return {

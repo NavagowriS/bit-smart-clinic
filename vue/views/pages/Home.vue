@@ -8,7 +8,7 @@
       <div class="row">
 
         <div class="col">
-          <h2 class="text-center text-white">Smart Clinic</h2>
+          <h2 class="text-center text-white">Smart Clinic - BIT Project</h2>
           <hr>
         </div><!-- col -->
 

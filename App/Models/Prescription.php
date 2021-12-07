@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Database\Database;
+use PDO;
 
 class Prescription implements IModel
 {
@@ -67,4 +68,63 @@ class Prescription implements IModel
     {
         return Database::delete( self::TABLE, 'id', $this->id );
     }
+
+
+    public static function findByAppointment( ClinicAppointment $appointment ): ?Prescription
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'select * from prescriptions where appointment_id=? limit 1' );
+        $statement->execute( [ $appointment->id ] );
+
+        /** @var self $result */
+        $result = $statement->fetchObject( self::class );
+
+        if ( !empty( $result ) ) {
+            $result->appointment = ClinicAppointment::find( $result->appointment_id );
+
+            return $result;
+        }
+
+        return null;
+
+    }
+
+    /**
+     * @param string $startDate
+     * @param string $endDate
+     * @param string|null $status - PENDING, COMPLETED
+     */
+    public static function findBetweenDates( string $startDate, string $endDate, string $status = null ): array
+    {
+        $db = Database::instance();
+
+        if ( is_null( $status ) ) {
+            $statement = $db->prepare( 'select * from prescriptions where prescription_date between :sd and :ed' );
+            $statement->execute( [
+                ':sd' => $startDate,
+                ':ed' => $endDate,
+            ] );
+
+        } else {
+            $statement = $db->prepare( 'select * from prescriptions where (prescription_date between :sd and :ed) and status=:status' );
+            $statement->execute( [
+                ':sd' => $startDate,
+                ':ed' => $endDate,
+                ':status' => $status,
+            ] );
+        }
+
+        /** @var self[] $results */
+        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+
+        if ( !empty( $results ) ) {
+            foreach ( $results as $result ) {
+                $result->appointment = ClinicAppointment::find( $result->appointment_id );
+            }
+            return $results;
+        }
+
+        return [];
+    }
+
 }

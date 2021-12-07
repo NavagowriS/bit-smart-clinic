@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Core\Database\Database;
 use App\Models\Pharmacy\Drug;
+use PDO;
 
 class PrescriptionItem implements IModel
 {
@@ -11,7 +12,7 @@ class PrescriptionItem implements IModel
     private const TABLE = 'prescription_items';
 
     public ?int $id, $prescription_id, $drug_id, $dose, $period, $total_count;
-    public ?string $remarks;
+    public ?string $remarks, $frequency;
 
     public ?Drug $drug;
 
@@ -44,14 +45,14 @@ class PrescriptionItem implements IModel
     public function insert(): int
     {
 
-        $this->total_count = $this->dose * $this->period;
+        $this->total_count = 1;
 
         $data = [
             'prescription_id' => $this->prescription_id,
             'drug_id' => $this->drug_id,
-            'dose' => $this->dose,
-            'period' => $this->period,
-            'remarks' => $this->remarks,
+            'dose' => 1,
+            'period' => 1,
+            'remarks' => '',
             'total_count' => $this->total_count,
         ];
         return Database::insert( self::TABLE, $data );
@@ -63,6 +64,7 @@ class PrescriptionItem implements IModel
 
         $data = [
             'dose' => $this->dose,
+            'frequency' => $this->frequency,
             'period' => $this->period,
             'remarks' => $this->remarks,
             'total_count' => $this->total_count,
@@ -74,4 +76,24 @@ class PrescriptionItem implements IModel
     {
         return Database::delete( self::TABLE, 'id', $this->id );
     }
+
+    public static function findByPrescription( Prescription $prescription ): array
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'select * from prescription_items where prescription_id=?' );
+        $statement->execute( [ $prescription->id ] );
+
+        /** @var self[] $results */
+        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+
+        if ( !empty( $results ) ) {
+            foreach ( $results as $result ) {
+                $result->drug = Drug::find( $result->drug_id );
+            }
+            return $results;
+        }
+        return [];
+
+    }
+
 }

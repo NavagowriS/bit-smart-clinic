@@ -166,6 +166,21 @@ export const pharmacyDrugsStore = {
             return await axios.post( 'pharmacy/po/delete.php', { id: id } );
         },
 
+        /*
+        ------------------
+        prescriptions
+        ------------------
+        */
+
+        /**
+         *
+         * @param context
+         * @param params [start_date, end_date, status(optional)]
+         */
+        async fetchPrescriptions( context, params ) {
+            const response = await axios.post( 'clinics/prescriptions/find-between-dates.php', params );
+            return response.data.payload;
+        },
 
     },
 

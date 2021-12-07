@@ -118,20 +118,11 @@ export default {
     onSearch: async function () {
       try {
 
-        console.log( this.searchKeyword );
-
         this.drugsList = await this.$store.dispatch( 'pharmacyDrugs/search', this.searchKeyword );
-
         this.searched = true;
 
       } catch ( e ) {
-
-        if ( e.response ) {
-          showErrorDialog( { message: e.response.data.payload.error } );
-        } else {
-          showErrorDialog( { message: 'Failed to fetch search results' } );
-        }
-
+        showErrorDialog( e.response, 'Failed to fetch search results' );
       }
     },
 
