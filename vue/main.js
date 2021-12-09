@@ -23,7 +23,7 @@ window.bootstrap = require( 'bootstrap/dist/js/bootstrap.bundle.min' );
 /* Axios configurations */
 
 axios.defaults.baseURL = 'http://localhost/api';
-axios.defaults.headers[ 'auth' ] = store.getters['auth/getAuthKey'];
+axios.defaults.headers[ 'auth' ] = store.getters[ 'auth/getAuthKey' ];
 
 /*
 * Axios intercepting incoming responses, to check if it is 401,
@@ -44,6 +44,7 @@ axios.interceptors.response.use( undefined, ( error => {
 
 Chart.defaults.font.family = 'Sora';
 
+Vue.config.productionTip = false;
 
 /* Vue initialization */
 new Vue( {

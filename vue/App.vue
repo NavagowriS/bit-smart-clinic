@@ -6,12 +6,17 @@
 		</div>
 		
 		<div class="mt-5 mb-3">
-			<footer class="container-fluid text-white">
+			<footer class="container-fluid text-white text-center">
 				<div class="row">
-					<div class="col text-center">
-						<hr>
-						BIT Project &mdash; Smart Clinic
-					</div>
+					<hr>
+						<div class="col">
+							<h6> &copy 2021 - Smart Clinic </h6>
+						</div>
+						<div class="col">
+						</div>
+						<div class="col">
+							<h6> Developed by - Navagowry.N </h6>
+						</div>
 				</div>
 			</footer>
 		</div>

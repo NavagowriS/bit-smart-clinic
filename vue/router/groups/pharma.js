@@ -1,3 +1,4 @@
+import PageDispensePrescription from '@/views/pharma/dispense/PageDispensePrescription.vue';
 import PageAddDrug from '@/views/pharma/drugs/PageAddDrug.vue';
 import PageEditDrug from '@/views/pharma/drugs/PageEditDrug.vue';
 import PageFilterDrugs from '@/views/pharma/drugs/PageFilterDrugs.vue';
@@ -61,6 +62,14 @@ export const pharmaRoutes = [
                 name: 'PageEditTag',
                 component: PageEditTag,
             },
+
+            /* prescriptions / dispense */
+            {
+                path: '/prescriptions/dispense/:id',
+                name: 'PageDispensePrescription',
+                component: PageDispensePrescription,
+            },
+
         ],
     },
 ];

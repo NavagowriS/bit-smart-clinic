@@ -60,8 +60,6 @@ class PrescriptionItem implements IModel
 
     public function update(): bool
     {
-        $this->total_count = $this->dose * $this->period;
-
         $data = [
             'dose' => $this->dose,
             'frequency' => $this->frequency,

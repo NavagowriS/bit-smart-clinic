@@ -10,8 +10,14 @@ export const prescriptionsStore = {
 
     actions: {
 
+        async fetch( context, id ) {
+            const response = await axios.post( 'clinics/prescriptions/get.php', { id: id } );
+            return response.data.payload[ 'data' ];
+        },
+
+
         async fetchByAppointment( context, appointmentId ) {
-            const response = await axios.post( 'clinics/prescriptions/get-prescription.php', { appointment_id: appointmentId } );
+            const response = await axios.post( 'clinics/prescriptions/get-by-appointment.php', { appointment_id: appointmentId } );
             return response.data.payload[ 'data' ];
         },
 
@@ -30,8 +36,29 @@ export const prescriptionsStore = {
          * @param params [remarks]
          */
         async updatePrescription( context, params ) {
-            await axios.post( 'clinics/prescriptions/create-prescription.php', params );
+            await axios.post( 'clinics/prescriptions/update.php', params );
         },
+
+        async updatePrescriptionStatusCompleted( context, id ) {
+            await axios.post( 'clinics/prescriptions/update.php', {
+                id: id,
+                status: 'COMPLETED',
+            } );
+        },
+
+        async updatePrescriptionStatusPending( context, id ) {
+            await axios.post( 'clinics/prescriptions/update.php', {
+                id: id,
+                status: 'PENDING',
+            } );
+        },
+
+
+        /*
+        * -----------------------------------------------------------------------------------------------
+        * Prescription Items
+        * -----------------------------------------------------------------------------------------------
+        * */
 
         /**
          *

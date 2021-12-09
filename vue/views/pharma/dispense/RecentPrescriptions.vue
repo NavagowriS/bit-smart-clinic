@@ -32,7 +32,9 @@
 					</thead>
 					<tbody>
 					<tr v-for="item in latestPendingPrescriptions">
-						<td>{{ item.id }}</td>
+						<td>
+							<router-link :to="{name:'PageDispensePrescription', params: {id: item.id}}">{{ item.id }}</router-link>
+						</td>
 						<td>{{ item.prescription_date }}</td>
 						<td>{{ item.appointment.clinic.title }}</td>
 						<td>{{ item.appointment.clinic_patient.patient.full_name }}</td>

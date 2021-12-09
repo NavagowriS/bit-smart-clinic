@@ -117,18 +117,41 @@ class Drug implements IModel
         return [];
     }
 
+    /**
+     * Get the total available count for the drug,
+     * this will subtract count from prescription too
+     * @param Drug $drug
+     * @return int
+     */
     public static function getCount( Drug $drug ): int
     {
+
+
+        $totalPurchased = 0;
+        $totalDispensed = 0;
+
         $db = Database::instance();
+
+        /* get total purchased drugs */
         $statement = $db->prepare( 'select sum(quantity) as total from pharma_drug_po where drug_id=?' );
 
         $statement->execute( [ $drug->id ] );
-
         $result = $statement->fetchObject( stdClass::class );
 
-        if ( !empty( $result->total ) ) return $result->total;
+        if ( !empty( $result->total ) ) $totalPurchased = $result->total;
 
-        return 0;
+
+        /* get total dispensed drugs count */
+        $statement = $db->prepare( 'select sum(total_count) as total from prescription_items where drug_id=?
+                                    and prescription_id in (select id from prescriptions where status = "COMPLETED")' );
+
+        $statement->execute( [ $drug->id ] );
+        $result = $statement->fetchObject( stdClass::class );
+
+        if ( !empty( $result->total ) ) $totalDispensed = $result->total;
+
+
+        return $totalPurchased - $totalDispensed;
 
     }
 

@@ -24,6 +24,7 @@ try {
         "frequency" => Request::getAsString( "frequency" ),
         "period" => Request::getAsInteger( "period", true ),
         "remarks" => Request::getAsString( "remarks" ),
+        "total_count" => Request::getAsInteger( "total_count" ),
     ];
 
 

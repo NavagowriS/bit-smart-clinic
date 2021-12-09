@@ -173,3 +173,17 @@
  * @property {string} status
  * @property {ClinicAppointment} appointment
  */
+
+
+/**
+ * @typedef {Object} PrescriptionItem
+ * @property {number} id
+ * @property {number} prescription_id
+ * @property {number} drug_id
+ * @property {number} dose
+ * @property {string} frequency
+ * @property {number} period
+ * @property {string} remarks
+ * @property {number} total_count
+ * @property {Drug} drug
+ */

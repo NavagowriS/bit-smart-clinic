@@ -58,11 +58,13 @@ class Prescription implements IModel
     public function update(): bool
     {
         $data = [
-            'remarks' => '',
+            'remarks' => $this->remarks,
+            'status' => $this->status,
         ];
 
         return Database::update( self::TABLE, $data, [ 'id' => $this->id ] );
     }
+
 
     public function delete(): bool
     {
@@ -93,6 +95,7 @@ class Prescription implements IModel
      * @param string $startDate
      * @param string $endDate
      * @param string|null $status - PENDING, COMPLETED
+     * @return array
      */
     public static function findBetweenDates( string $startDate, string $endDate, string $status = null ): array
     {
