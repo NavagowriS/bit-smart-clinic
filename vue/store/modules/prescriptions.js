@@ -91,6 +91,15 @@ export const prescriptionsStore = {
             await axios.post( 'clinics/prescriptions/update-prescription-item.php', params );
         },
 
+        /**
+         *
+         * @param context
+         * @param params [id]
+         */
+        async deletePrescriptionItem( context, id ) {
+            await axios.post( 'clinics/prescriptions/delete-prescription-item.php', { id: id } );
+        },
+
     },
 
 };

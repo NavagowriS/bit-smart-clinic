@@ -5,6 +5,7 @@ import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import Chart from 'chart.js/auto';
 import Vue from 'vue';
+import VueApexCharts from 'vue-apexcharts';
 
 import App from './App';
 import './assets/libs/daterangepicker/daterangepicker';
@@ -45,6 +46,10 @@ axios.interceptors.response.use( undefined, ( error => {
 Chart.defaults.font.family = 'Sora';
 
 Vue.config.productionTip = false;
+
+
+Vue.use( VueApexCharts );
+Vue.component( 'apexChart', VueApexCharts );
 
 /* Vue initialization */
 new Vue( {

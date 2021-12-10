@@ -16,9 +16,10 @@ try {
         'start_date' => Request::getAsString( 'start_date', true ),
         'end_date' => Request::getAsString( 'end_date', true ),
         'status' => Request::getAsString( 'status' ),
+        'clinic_id' => Request::getAsInteger( 'clinic_id' ),
     ];
 
-    $prescriptions = Prescription::findBetweenDates( $fields[ 'start_date' ], $fields[ 'end_date' ], $fields[ 'status' ] );
+    $prescriptions = Prescription::findBetweenDates( $fields[ 'start_date' ], $fields[ 'end_date' ], $fields[ 'status' ], $fields[ 'clinic_id' ] );
 
     JSONResponse::validResponse( $prescriptions );
     return;

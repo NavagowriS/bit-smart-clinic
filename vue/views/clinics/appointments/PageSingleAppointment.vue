@@ -108,7 +108,7 @@
                 <!-- visit params -->
 
                 <div class="visit_doctor_remarks">
-                  <div class="mb-2">
+                  <div class="mb-3">
                     <label class="form-label">Doctor remarks</label>
                     <textarea rows="10" class="form-control" v-model="appointment.doctor_remarks" :disabled="formDisabled"></textarea>
                   </div>

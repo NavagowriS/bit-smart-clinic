@@ -10,7 +10,7 @@ export const pagesRoutes = [
         component: Home,
         meta: {
             requiresAuth: true,
-            hasAccess: ['ADMIN', 'STAFF', 'DOCTOR'],
+            hasAccess: ['ADMIN', 'STAFF', 'DOCTOR', 'PHARMACIST'],
         },
     },
     {

@@ -24,17 +24,17 @@ class Request
      */
     public static function method(): string
     {
-        return $_SERVER['REQUEST_METHOD'];
+        return $_SERVER[ 'REQUEST_METHOD' ];
     }
 
     public static function scheme()
     {
-        return $_SERVER['REQUEST_SCHEME'];
+        return $_SERVER[ 'REQUEST_SCHEME' ];
     }
 
     public static function host()
     {
-        return $_SERVER['HTTP_HOST'];
+        return $_SERVER[ 'HTTP_HOST' ];
     }
 
 
@@ -43,12 +43,12 @@ class Request
      * @return bool
      * @throws Exception
      */
-    public static function validateRequestMethod($acceptableMethod): bool
+    public static function validateRequestMethod( $acceptableMethod ): bool
     {
-        if (Request::method() == $acceptableMethod) return true;
+        if ( Request::method() == $acceptableMethod ) return true;
 
         $method = Request::method();
-        throw new Exception("$method not accepted");
+        throw new Exception( "$method not accepted" );
     }
 
     /*
@@ -62,14 +62,14 @@ class Request
      * @return string|null
      * @throws Exception
      */
-    private static function getParam(string $key, bool $required = false): ?string
+    private static function getParam( string $key, bool $required = false ): ?string
     {
         $axios = self::getAxiosData();
 
-        $_REQUEST = array_merge($axios, $_REQUEST);
+        $_REQUEST = array_merge( $axios, $_REQUEST );
 
-        if (isset($_REQUEST[$key])) {
-            if (!empty($_REQUEST[$key])) return $_REQUEST[$key];
+        if ( isset( $_REQUEST[ $key ] ) ) {
+            return $_REQUEST[ $key ];
         }
 
 
@@ -77,12 +77,12 @@ class Request
          * speciality_id => ["speciality", "id"]
          *
          * */
-        $k = explode("_", $key);
-        $k[0] = ucfirst($k[0]);
+        $k = explode( "_", $key );
+        $k[ 0 ] = ucfirst( $k[ 0 ] );
 
-        $key_output = implode(" ", $k);
+        $key_output = implode( " ", $k );
 
-        if ($required) throw new Exception("Field ($key_output) is required");
+        if ( $required ) throw new Exception( "Field ($key_output) is required" );
         return null;
     }
 
@@ -93,13 +93,14 @@ class Request
      * @return int|null
      * @throws Exception
      */
-    public static function getAsInteger(string $key, bool $required = false): ?int
+    public static function getAsInteger( string $key, bool $required = false ): ?int
     {
-        $data = self::getParam($key, $required);
+        $data = self::getParam( $key, $required );
 
-        if (!empty($data)) {
-            if ($data == '0') return 0;
-            if (filter_var($data, FILTER_VALIDATE_INT)) {
+        if ( $data == '0' ) return 0;
+
+        if ( !empty( $data ) ) {
+            if ( filter_var( $data, FILTER_VALIDATE_INT ) ) {
                 return (int)$data;
             }
         }
@@ -113,13 +114,13 @@ class Request
      * @return float|null
      * @throws Exception
      */
-    public static function getAsFloat(string $key, bool $required = false): ?float
+    public static function getAsFloat( string $key, bool $required = false ): ?float
     {
-        $data = self::getParam($key, $required);
+        $data = self::getParam( $key, $required );
 
-        if (!empty($data)) {
-            if ($data == '0') return 0;
-            return filter_var($data, FILTER_VALIDATE_FLOAT);
+        if ( !empty( $data ) ) {
+            if ( $data == '0' ) return 0;
+            return filter_var( $data, FILTER_VALIDATE_FLOAT );
         }
 
         return null;
@@ -132,12 +133,12 @@ class Request
      * @return string|null
      * @throws Exception
      */
-    public static function getAsString(string $key, bool $required = false): ?string
+    public static function getAsString( string $key, bool $required = false ): ?string
     {
-        $data = self::getParam($key, $required);
+        $data = self::getParam( $key, $required );
 
-        if (!empty($data)) {
-            return filter_var($data, FILTER_SANITIZE_STRING);
+        if ( !empty( $data ) ) {
+            return filter_var( $data, FILTER_SANITIZE_STRING );
         }
 
         return "";
@@ -149,9 +150,9 @@ class Request
      * @return string|null
      * @throws Exception
      */
-    public static function getAsRawString(string $key, bool $required = false): ?string
+    public static function getAsRawString( string $key, bool $required = false ): ?string
     {
-        return self::getParam($key, $required);
+        return self::getParam( $key, $required );
     }
 
     /**
@@ -160,11 +161,11 @@ class Request
      * @return bool|null
      * @throws Exception
      */
-    public static function getAsBoolean(string $key, bool $required = false): ?bool
+    public static function getAsBoolean( string $key, bool $required = false ): ?bool
     {
-        $data = self::getParam($key, $required);
-        if (!is_null($data)) {
-            return filter_var($data, FILTER_VALIDATE_BOOLEAN);
+        $data = self::getParam( $key, $required );
+        if ( !is_null( $data ) ) {
+            return filter_var( $data, FILTER_VALIDATE_BOOLEAN );
         }
 
         return null;
@@ -175,8 +176,8 @@ class Request
 
     public static function getAuthKey(): string
     {
-        if (isset($_SERVER['HTTP_AUTH'])) {
-            return $_SERVER['HTTP_AUTH'];
+        if ( isset( $_SERVER[ 'HTTP_AUTH' ] ) ) {
+            return $_SERVER[ 'HTTP_AUTH' ];
         }
         return '';
     }
@@ -184,13 +185,13 @@ class Request
     public static function getBasicAuthData(): ?array
     {
 
-        if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        if ( isset( $_SERVER[ 'HTTP_AUTHORIZATION' ] ) ) {
 
-            $data = $_SERVER['HTTP_AUTHORIZATION'];
-            $data = explode(" ", $data)[1];
-            $data = base64_decode($data);
+            $data = $_SERVER[ 'HTTP_AUTHORIZATION' ];
+            $data = explode( " ", $data )[ 1 ];
+            $data = base64_decode( $data );
 
-            return explode(":", $data);
+            return explode( ":", $data );
 
         }
         return null;
@@ -201,25 +202,25 @@ class Request
     {
 
         // Allow from any origin
-        if (isset($_SERVER['HTTP_ORIGIN'])) {
+        if ( isset( $_SERVER[ 'HTTP_ORIGIN' ] ) ) {
             // Decide if the origin in $_SERVER['HTTP_ORIGIN'] is one
             // you want to allow, and if so:
-            header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
-            header('Access-Control-Allow-Credentials: true');
-            header('Access-Control-Max-Age: 86400');    // cache for 1 day
+            header( "Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}" );
+            header( 'Access-Control-Allow-Credentials: true' );
+            header( 'Access-Control-Max-Age: 86400' );    // cache for 1 day
         }
 
         // Access-Control headers are received during OPTIONS requests
-        if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+        if ( $_SERVER[ 'REQUEST_METHOD' ] == 'OPTIONS' ) {
 
-            if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
+            if ( isset( $_SERVER[ 'HTTP_ACCESS_CONTROL_REQUEST_METHOD' ] ) )
                 // may also be using PUT, PATCH, HEAD etc
-                header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+                header( "Access-Control-Allow-Methods: GET, POST, OPTIONS" );
 
-            if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
-                header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+            if ( isset( $_SERVER[ 'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' ] ) )
+                header( "Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}" );
 
-            exit(0);
+            exit( 0 );
         }
 
     }
@@ -229,9 +230,9 @@ class Request
     private static function getAxiosData(): array
     {
 
-        $data = json_decode(file_get_contents('php://input'), true);
+        $data = json_decode( file_get_contents( 'php://input' ), true );
 
-        if (!is_null($data)) return $data;
+        if ( !is_null( $data ) ) return $data;
         return [];
 
     }

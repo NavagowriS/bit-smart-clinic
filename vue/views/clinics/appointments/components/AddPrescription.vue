@@ -36,22 +36,43 @@
 								<th style="width: 120px">Frequency (Per Day)</th>
 								<th style="width: 120px">Period (Days)</th>
 								<th>Remarks</th>
+								<th style="width: 10px"></th>
 							</tr>
 							</thead>
 							<tbody>
 							<tr v-for="item in prescriptionItems">
 								<td>{{ item.drug.drug_name }}</td>
 								<td>
-									<input type="number" class="form-control text-end" min="1" v-model.number="item['dose']" @change="onUpdatePrescriptionItem(item)">
+									<input type="number"
+												 class="form-control form-control-sm text-end"
+												 min="1"
+												 v-model.number="item['dose']"
+												 @change="onUpdatePrescriptionItem(item)">
 								</td>
 								<td>
-									<input type="text" class="form-control text-end" min="1" v-model="item['frequency']" @change="onUpdatePrescriptionItem(item)">
+									<input type="text"
+												 class="form-control form-control-sm text-end"
+												 min="1"
+												 v-model="item['frequency']"
+												 @change="onUpdatePrescriptionItem(item)">
 								</td>
 								<td>
-									<input type="number" class="form-control text-end" min="1" v-model.number="item['period']" @change="onUpdatePrescriptionItem(item)">
+									<input type="number"
+												 class="form-control form-control-sm text-end"
+												 min="1"
+												 v-model.number="item['period']"
+												 @change="onUpdatePrescriptionItem(item)">
 								</td>
 								<td>
-									<input type="text" class="form-control" v-model="item['remarks']" @change="onUpdatePrescriptionItem(item)">
+									<input type="text"
+												 class="form-control form-control-sm"
+												 v-model="item['remarks']"
+												 @change="onUpdatePrescriptionItem(item)">
+								</td>
+								<td>
+									<button class="btn btn-sm btn-danger" @click="onDeletePrescriptionItem(item)">
+										<i class="bi bi-trash-fill"></i>
+									</button>
 								</td>
 							</tr>
 							</tbody>
@@ -229,8 +250,24 @@ export default {
 				showErrorDialog( null, 'Invalid value provided' );
 			}
 			
-		}, 500 ),
+		}, 500 ), /* on update prescription item */
 		
+		
+		async onDeletePrescriptionItem( item ) {
+			try {
+				await this.$store.dispatch( 'prescriptions/deletePrescriptionItem', item.id );
+				
+				this.prescriptionItems = await this.$store.dispatch( 'prescriptions/fetchAllPrescriptionItems', this.prescription.id );
+				
+				this.itemsUpdated = true;
+				setTimeout( () => {
+					this.itemsUpdated = false;
+				}, 1000 );
+				
+			} catch ( e ) {
+				showErrorDialog( e.response );
+			}
+		},
 		
 	},
 	

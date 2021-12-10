@@ -3,14 +3,20 @@
 	<div>
 		
 		<CardSection>
-			<template v-slot:header>Recent Prescriptions</template>
+			<template v-slot:header>{{ statusString }} prescriptions: {{ dateRangeValue.startDate }} &mdash; {{ dateRangeValue.endDate }}</template>
 			
-			<div class="mb-3 d-flex gap-3 justify-content-end">
+			<div class="mb-3 d-flex gap-3 justify-content-end" v-if="!simple">
 				<div class="">
-					<DateRangeField v-model="dateRange"/>
+					<DateRangeField v-model="dateRangeValue"/>
 				</div>
 				<div class="">
-					<select class="form-select" v-model="status">
+					<select class="form-select" v-model="selectedClinicId">
+						<option value="0">All Clinics</option>
+						<option v-for="item in clinicsList" :value="item.id">{{ item.title }}</option>
+					</select>
+				</div>
+				<div class="">
+					<select class="form-select" v-model="statusValue">
 						<option v-for="(item, key) in allStatuses" :value="key">{{ item }}</option>
 					</select>
 				</div>
@@ -61,10 +67,31 @@ import CardSection from '@/components/CardSection.vue';
 import DateRangeField from '@/components/fields/DateRangeField.vue';
 import {showErrorDialog} from '@/helpers/common.js';
 import moment from 'moment';
+import voca from 'voca';
 
 export default {
 	name: 'RecentPrescriptions',
 	components: { DateRangeField, CardSection },
+	
+	props: {
+		dateRange: {
+			type: Object,
+			default: function () {
+				return {
+					startDate: moment().subtract( 7, 'days' ).format( 'YYYY-MM-DD' ),
+					endDate: moment().format( 'YYYY-MM-DD' ),
+				};
+			},
+		},
+		status: {
+			type: String,
+			default: 'PENDING',
+		},
+		simple: {
+			type: Boolean,
+			default: true,
+		},
+	},
 	
 	data() {
 		return {
@@ -72,23 +99,30 @@ export default {
 			/** @type {Prescription[]} */
 			latestPendingPrescriptions: [],
 			
-			dateRange: {
-				startDate: moment().subtract( 1, 'months' ).format( 'YYYY-MM-DD' ),
-				endDate: moment().format( 'YYYY-MM-DD' ),
-			},
-			
-			status: 'PENDING',
-			
 			allStatuses: {
 				'PENDING': 'Pending',
 				'COMPLETED': 'Completed',
 			},
 			
+			dateRangeValue: this.dateRange,
+			statusValue: this.status,
+			
+			selectedClinicId: 0,
+			
 		};
 	},
 	
 	computed: {
-		//
+		
+		/** @return {Clinic[]} */
+		clinicsList() {
+			return this.$store.getters[ 'clinics/getClinicsList' ];
+		},
+		
+		statusString() {
+			return voca.titleCase( this.statusValue );
+		},
+		
 	},
 	
 	methods: {
@@ -96,9 +130,10 @@ export default {
 			try {
 				
 				const params = {
-					start_date: this.dateRange.startDate,
-					end_date: this.dateRange.endDate,
-					status: this.status,
+					start_date: this.dateRangeValue.startDate,
+					end_date: this.dateRangeValue.endDate,
+					status: this.statusValue,
+					clinic_id: this.selectedClinicId,
 				};
 				
 				this.latestPendingPrescriptions = await this.$store.dispatch( 'pharmacyDrugs/fetchPrescriptions', params );
@@ -113,12 +148,15 @@ export default {
 		try {
 			
 			const params = {
-				start_date: this.dateRange.startDate,
-				end_date: this.dateRange.endDate,
-				status: this.status,
+				start_date: this.dateRangeValue.startDate,
+				end_date: this.dateRangeValue.endDate,
+				status: this.statusValue,
+				clinic_id: this.selectedClinicId,
 			};
 			
 			this.latestPendingPrescriptions = await this.$store.dispatch( 'pharmacyDrugs/fetchPrescriptions', params );
+			
+			await this.$store.dispatch( 'clinics/fetchAll' );
 			
 		} catch ( e ) {
 			showErrorDialog( e.response );

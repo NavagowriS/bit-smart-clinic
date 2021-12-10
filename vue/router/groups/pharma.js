@@ -5,6 +5,8 @@ import PageFilterDrugs from '@/views/pharma/drugs/PageFilterDrugs.vue';
 import PageViewAllDrugs from '@/views/pharma/drugs/PageViewAllDrugs.vue';
 import PagePharmaHome from '@/views/pharma/PagePharmaHome.vue';
 import PagePharmaStats from '@/views/pharma/PagePharmaStats.vue';
+import PagePrescriptions from '@/views/pharma/prescriptions/PagePrescriptions.vue';
+import PageDrugsReports from '@/views/pharma/reports/PageDrugsReports.vue';
 import PageAddTag from '@/views/pharma/tags/PageAddTag.vue';
 import PageEditTag from '@/views/pharma/tags/PageEditTag.vue';
 import PageViewAllTags from '@/views/pharma/tags/PageViewAllTags.vue';
@@ -65,11 +67,22 @@ export const pharmaRoutes = [
 
             /* prescriptions / dispense */
             {
+                path: '/prescriptions',
+                name: 'PagePrescriptions',
+                component: PagePrescriptions,
+            },
+            {
                 path: '/prescriptions/dispense/:id',
                 name: 'PageDispensePrescription',
                 component: PageDispensePrescription,
             },
 
+            /* reports */
+            {
+                path: '/reports/drugs',
+                name: 'PageDrugReports',
+                component: PageDrugsReports,
+            },
         ],
     },
 ];

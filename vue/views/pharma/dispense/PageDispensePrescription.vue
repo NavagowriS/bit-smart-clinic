@@ -44,20 +44,22 @@
 						<th style="width: 120px">Frequency (Per Day)</th>
 						<th style="width: 120px">Period (Days)</th>
 						<th>Quantity</th>
+						<th>Avl.Quantity</th>
 					</tr>
 					</thead>
 					<tbody>
 					<tr v-for="item in prescriptionItems">
-						<td>{{ item.drug.drug_name }}</td>
-						<td> {{ item.dose }}</td>
-						<td> {{ item.frequency }}</td>
-						<td> {{ item.period }}</td>
+						<td class="align-middle">{{ item.drug.drug_name }}</td>
+						<td class="align-middle"> {{ item.dose }}</td>
+						<td class="align-middle"> {{ item.frequency }}</td>
+						<td class="align-middle"> {{ item.period }}</td>
 						<td>
 							<input type="number" class="form-control form-control-sm" min="0"
 										 :disabled="isCompleted"
 										 v-model="item['total_count']"
 										 @change="onUpdatePrescriptionItem(item)">
 						</td>
+						<td class="align-middle">{{ item.drug.total_count }}</td>
 					</tr>
 					</tbody>
 				</table>

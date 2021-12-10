@@ -95,27 +95,56 @@ class Prescription implements IModel
      * @param string $startDate
      * @param string $endDate
      * @param string|null $status - PENDING, COMPLETED
+     * @param int $clinicId - 0 for all clinic
      * @return array
      */
-    public static function findBetweenDates( string $startDate, string $endDate, string $status = null ): array
+    public static function findBetweenDates( string $startDate, string $endDate, string $status = null, int $clinicId = 0 ): array
     {
         $db = Database::instance();
 
-        if ( is_null( $status ) ) {
-            $statement = $db->prepare( 'select * from prescriptions where prescription_date between :sd and :ed' );
-            $statement->execute( [
-                ':sd' => $startDate,
-                ':ed' => $endDate,
-            ] );
+        if ( $clinicId != 0 ) {
+            if ( is_null( $status ) ) {
 
+                $statement = $db->prepare( 'select * from prescriptions 
+                                                where prescription_date between :sd and :ed and 
+                                                appointment_id in (select id from clinic_appointments where clinic_id = :clinicId)' );
+
+                $statement->execute( [
+                    ':sd' => $startDate,
+                    ':ed' => $endDate,
+                    ':clinicId' => $clinicId,
+                ] );
+
+            } else {
+                $statement = $db->prepare( 'select * from prescriptions 
+                                                where (prescription_date between :sd and :ed) 
+                                                  and status=:status and
+                                                   appointment_id in (select id from clinic_appointments where clinic_id = :clinicId)' );
+                $statement->execute( [
+                    ':sd' => $startDate,
+                    ':ed' => $endDate,
+                    ':status' => $status,
+                    ':clinicId' => $clinicId,
+                ] );
+            }
         } else {
-            $statement = $db->prepare( 'select * from prescriptions where (prescription_date between :sd and :ed) and status=:status' );
-            $statement->execute( [
-                ':sd' => $startDate,
-                ':ed' => $endDate,
-                ':status' => $status,
-            ] );
+            if ( is_null( $status ) ) {
+                $statement = $db->prepare( 'select * from prescriptions where prescription_date between :sd and :ed' );
+                $statement->execute( [
+                    ':sd' => $startDate,
+                    ':ed' => $endDate,
+                ] );
+
+            } else {
+                $statement = $db->prepare( 'select * from prescriptions where (prescription_date between :sd and :ed) and status=:status' );
+                $statement->execute( [
+                    ':sd' => $startDate,
+                    ':ed' => $endDate,
+                    ':status' => $status,
+                ] );
+            }
         }
+
 
         /** @var self[] $results */
         $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );

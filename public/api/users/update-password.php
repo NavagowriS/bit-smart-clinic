@@ -20,7 +20,7 @@ try {
 
     $fields = [
         'id' => Request::getAsInteger('id', true),
-        'current_password' => Request::getAsString('current_password', true),
+        'current_password' => Request::getAsString('current_password'),
         'new_password' => Request::getAsString('new_password', true),
     ];
 
@@ -29,7 +29,7 @@ try {
 
     if (is_null($user)) throw new Exception('Invalid user');
 
-    if (!$user->validatePassword($fields['current_password'])) throw new Exception('Invalid current password');
+//    if (!$user->validatePassword($fields['current_password'])) throw new Exception('Invalid current password');
 
     $result = $user->updatePassword($fields['new_password']);
 
