@@ -24,11 +24,6 @@
 		<div>
 			
 			<apex-chart height="300" type="bar" :options="barChart.options" :series="barChart.series"/>
-			
-			<div class="">
-				<button class="btn btn-primary" @click="onAddData">Add Data</button>
-			</div>
-		
 		</div>
 	
 	</CardSection>
@@ -49,12 +44,13 @@ export default {
 		return {
 			
 			dateRangeValue: {
-				startDate: moment().subtract( 7, 'days' ).format( 'YYYY-MM-DD' ),
+				startDate: moment().subtract( 1, 'months' ).format( 'YYYY-MM-DD' ),
 				endDate: moment().format( 'YYYY-MM-DD' ),
 			},
 			
 			selectedClinicId: 0,
 			
+			dispensedDrugsStats: null,
 			
 			/* chart data */
 			
@@ -67,17 +63,17 @@ export default {
 					plotOptions: {
 						bar: {
 							horizontal: true,
-							borderRadius: 5,
+							borderRadius: 2,
 						},
 					},
 					xaxis: {
-						categories: [1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998],
+						categories: [],
 					},
 				},
 				
 				series: [{
-					name: 'series 1',
-					data: [30, 40, 45, 50, 49, 60, 70, 91],
+					name: 'Dispensed',
+					data: [],
 				}],
 				
 			},
@@ -96,14 +92,38 @@ export default {
 	methods: {
 		
 		async onSearch() {
-		
+			await this._fetchStats();
 		},
 		
-		onAddData() {
-			this.barChart.options.xaxis.categories.push( 1999 );
+		
+		async _fetchStats() {
+			try {
+				
+				const params = {
+					start_date: this.dateRangeValue.startDate,
+					end_date: this.dateRangeValue.endDate,
+					clinic_id: this.selectedClinicId,
+				};
+				
+				this.dispensedDrugsStats = await this.$store.dispatch( 'pharmacyStats/statsDispensedCounts', params );
+				
+				this._updateChart();
+				
+			} catch ( e ) {
+				showErrorDialog( e.response );
+			}
+		},
+		
+		_updateChart() {
 			this.barChart.series = [{
-				data: [30, 40, 45, 50, 49, 60, 70, 91, 120],
+				data: this.dispensedDrugsStats[ 'chart_data' ][ 'values' ],
 			}];
+			
+			this.barChart.options = {
+				xaxis: {
+					categories: this.dispensedDrugsStats[ 'chart_data' ][ 'labels' ],
+				},
+			};
 		},
 		
 	},
@@ -112,6 +132,7 @@ export default {
 		try {
 			
 			await this.$store.dispatch( 'clinics/fetchAll' );
+			await this._fetchStats();
 			
 		} catch ( e ) {
 			showErrorDialog( e.response );

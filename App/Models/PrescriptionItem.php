@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Core\Database\Database;
 use App\Models\Pharmacy\Drug;
+use Exception;
 use PDO;
 
 class PrescriptionItem implements IModel
@@ -42,8 +43,13 @@ class PrescriptionItem implements IModel
         // TODO: Implement findAll() method.
     }
 
+    /**
+     * @throws Exception
+     */
     public function insert(): int
     {
+
+        if ( $this->exists() ) throw new Exception( 'Drug already added to the prescription' );
 
         $this->total_count = 1;
 
@@ -91,7 +97,19 @@ class PrescriptionItem implements IModel
             return $results;
         }
         return [];
+    }
 
+    public function exists(): bool
+    {
+        $db = Database::instance();
+        $statement = $db->prepare( 'select * from prescription_items where prescription_id = ? and drug_id = ?' );
+        $statement->execute( [ $this->prescription_id, $this->drug_id ] );
+
+        /** @var self $result */
+        $result = $statement->fetchObject( self::class );
+
+        if ( !empty( $result ) ) return true;
+        return false;
     }
 
 }

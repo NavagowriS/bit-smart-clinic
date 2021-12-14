@@ -170,4 +170,89 @@ class Drug implements IModel
 
     }
 
+    public static function getDrugDispenseStats( string $startDate, string $endDate, int $clinicId = 0 ): array
+    {
+        $db = Database::instance();
+
+        if ( $clinicId == 0 ) {
+            $statement = $db->prepare(
+                "SELECT tpi.drug_id as drug_id, tpd.drug_name as drug_name, sum(total_count) as total
+                FROM prescription_items tpi
+                         INNER JOIN pharma_drugs tpd
+                                    ON tpi.drug_id = tpd.id
+                WHERE prescription_id in (
+                    SELECT id
+                    FROM prescriptions
+                    WHERE prescription_date BETWEEN :sd AND :ed
+                      AND STATUS = 'COMPLETED'
+                )
+                GROUP BY drug_id;" );
+
+            $statement->execute( [
+                ':sd' => $startDate,
+                ':ed' => $endDate,
+            ] );
+
+        } else {
+            $statement = $db->prepare(
+                "SELECT tpi.drug_id as drug_id, tpd.drug_name as drug_name, sum(total_count) as total
+                FROM prescription_items tpi
+                         INNER JOIN pharma_drugs tpd
+                                    ON tpi.drug_id = tpd.id
+                WHERE prescription_id in (
+                    SELECT id
+                    FROM prescriptions
+                    WHERE prescription_date BETWEEN :sd AND :ed
+                      AND STATUS = 'COMPLETED'
+                      AND appointment_id IN (
+                        SELECT id
+                        FROM clinic_appointments
+                        WHERE clinic_id = :clinic_id
+                    )
+                )
+                GROUP BY drug_id;" );
+
+            $statement->execute( [
+                ':sd' => $startDate,
+                ':ed' => $endDate,
+                ':clinic_id' => $clinicId,
+            ] );
+
+        }
+
+
+        $output = [
+            'data' => [],
+            'chart_data' => [
+                'labels' => [],
+                'values' => [],
+            ],
+        ];
+
+        /*
+         * [drug_id, $total]
+         */
+        $results = $statement->fetchAll( PDO::FETCH_CLASS, stdClass::class );
+
+
+        if ( !empty( $results ) ) {
+
+
+            foreach ( $results as $result ) {
+                $result->drug = Drug::find( $result->drug_id );
+                $result->total = intval( $result->total );
+
+                /* process into chart data */
+
+                $output[ 'chart_data' ][ 'labels' ][] = $result->drug->drug_name;
+                $output[ 'chart_data' ][ 'values' ][] = $result->total;
+            }
+
+            $output[ 'data' ] = $results;
+
+        }
+        return $output;
+
+    }
+
 }

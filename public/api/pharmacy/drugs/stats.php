@@ -10,23 +10,23 @@ require_once "../../../../bootstrap.php";
 try {
 
     Auth::authenticate();
+
+
     $output = [
         'threshold_warnings' => [],
     ];
 
+    /* threshold warnings */
     $drugs = Drug::findAll();
 
     if ( !empty( $drugs ) ) {
-
-
         foreach ( $drugs as $drug ) {
             if ( $drug->total_count <= $drug->min_quantity ) {
-                $output['threshold_warnings'][] = $drug;
+                $output[ 'threshold_warnings' ][] = $drug;
             }
-
         }
-
     }
+
 
     JSONResponse::validResponse( $output );
 

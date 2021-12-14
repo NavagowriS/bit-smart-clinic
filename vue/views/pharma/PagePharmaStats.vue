@@ -73,7 +73,7 @@ export default {
 	async mounted() {
 		try {
 			
-			this.drugStats = await this.$store.dispatch( 'pharmacyDrugs/stats' );
+			this.drugStats = await this.$store.dispatch( 'pharmacyStats/stats' );
 			
 		} catch ( e ) {
 			showErrorDialog( e.response, 'Failed to fetch stats' );

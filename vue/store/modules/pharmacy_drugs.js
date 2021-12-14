@@ -52,11 +52,6 @@ export const pharmacyDrugsStore = {
             return response.data.payload;
         },
 
-        async stats( context ) {
-            const response = await axios.post( 'pharmacy/drugs/stats.php' );
-            return response.data.payload;
-        },
-
 
         /*
         ------------------
