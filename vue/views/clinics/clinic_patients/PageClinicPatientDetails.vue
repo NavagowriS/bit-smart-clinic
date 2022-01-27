@@ -214,7 +214,7 @@ export default {
 				datasets: [
 					{
 						label: 'Weight',
-						borderColor: '#ff3a8c',
+						borderColor: '#b36620',
 						tension: 0.2,
 						data: [],
 					},
@@ -239,13 +239,13 @@ export default {
 				datasets: [
 					{
 						label: 'SBP',
-						backgroundColor: '#ff3a8c',
+						backgroundColor: '#198754',
 						tension: 0.2,
 						data: [],
 					},
 					{
 						label: 'DBP',
-						backgroundColor: '#3a4aff',
+						backgroundColor: '#3b5873',
 						tension: 0.2,
 						data: [],
 					},

@@ -1,6 +1,9 @@
 <template>
 	
-	<div class="container my-5" v-if="loaded">
+	<div class="container my-3" v-if="loaded">
+
+    <LogOut/>
+
 		<div class="row">
 			<div class="col">
 				
@@ -173,10 +176,11 @@
 <script>
 import CardSection from '@/components/CardSection.vue';
 import _ from 'lodash';
+import LogOut from '@/public_patient_views/components/LogOut';
 
 export default {
 	name: 'PageViewAppointment',
-	components: { CardSection },
+	components: {LogOut, CardSection },
 	
 	data() {
 		return {

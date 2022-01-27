@@ -10,7 +10,7 @@
 				<div class="row">
 					<div class="col text-center">
 						<hr>
-						BIT Project &mdash; Smart Clinic
+						©{{ new Date().getFullYear() }} &mdash; Smart Clinic
 					</div>
 				</div>
 			</footer>

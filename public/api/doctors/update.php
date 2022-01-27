@@ -24,6 +24,7 @@ try {
         "name" => Request::getAsString( "name", true ),
         "email" => Request::getAsString( "email", true ),
         "dob" => Request::getAsString( "dob" ),
+        "nic" => Request::getAsString( "nic" ),
         "phone" => Request::getAsString( "phone" ),
         "speciality_id" => Request::getAsInteger( "speciality_id", true ),
         "user_id" => Request::getAsInteger( "user_id" ),

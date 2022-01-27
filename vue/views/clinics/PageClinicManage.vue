@@ -69,7 +69,7 @@
 					</div>
 					
 					<div class="text-center">
-						<button class="btn btn-primary" @click="onUpdate()">
+						<button class="btn btn-primary" @click="onUpdate()" :disabled="selectedClinic.title === ''">
 							<i class="bi bi-check2"></i> Update
 						</button>
 					</div>

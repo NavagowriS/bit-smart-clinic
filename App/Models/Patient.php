@@ -45,6 +45,10 @@ class Patient implements IModel
     public function insert()
     {
 
+//        if(nicExists()){
+//            throw new \Exception('NIC Already exist');
+//        }
+
 
         $db = Database::instance();
 

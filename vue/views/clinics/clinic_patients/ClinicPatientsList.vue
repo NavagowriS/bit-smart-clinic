@@ -39,7 +39,7 @@
 						<router-link :to="_renderPatientDetailsLink(item)">{{ item.patient.full_name }}</router-link>
 					</td>
 					<td>{{ item.patient.dob }}</td>
-					<td>{{ item.patient.age }}</td>
+					<td>{{ renderAge( item.patient.dob, item.patient.age ) }}</td>
 					<td>{{ item.patient.nic }}</td>
 					<td>{{ item.patient.address }}</td>
 					<td>{{ item.since }}</td>

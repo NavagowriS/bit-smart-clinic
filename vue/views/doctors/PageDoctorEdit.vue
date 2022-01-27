@@ -17,7 +17,8 @@
 
               <div class="mb-3">
                 <label class="form-label">Doctor name*</label>
-                <input type="text" class="form-control" v-model.trim="doctor.name">
+                <input type="text" class="form-control" :class="{'is-invalid': doctor.name === ''}" v-model.trim="doctor.name">
+                  <div class="invalid-feedback">Doctor Name cannot be empty</div>
               </div>
 
               <div class="mb-3">
@@ -27,12 +28,21 @@
 
               <div class="mb-3">
                 <label class="form-label">Email*</label>
-                <input type="email" class="form-control" v-model.trim="doctor.email">
+                <input type="email" class="form-control" :class="{'is-invalid': doctor.email === ''}" v-model.trim="doctor.email">
+                <div class="invalid-feedback">Doctor Email cannot be empty</div>
               </div>
 
               <div class="mb-3">
+                  <label class="form-label">NIC</label>
+                  <input type="text" class="form-control" :class="{'is-invalid': !isValidNic}" v-model="doctor.nic">
+                  <div class="invalid-feedback">Invalid (Use 9 digits + V or 12 digits)</div>
+                </div>
+
+              <div class="mb-3">
                 <label class="form-label">Phone</label>
-                <input type="text" class="form-control" v-model="doctor.phone">
+                <input type="text" class="form-control" :class="{'is-invalid': !isPhoneValid}"
+                             placeholder="Eg. 077-8928474" v-model="doctor.phone">
+                      <div class="invalid-feedback">Invalid. (Use XXX-XXXXXXX)</div>
               </div>
 
               <div class="mb-3">
@@ -82,7 +92,7 @@
 
 
                 <div class="text-end">
-                  <button class="btn btn-primary" @click="onUpdate()" :disabled="!validated">Update</button>
+                  <button class="btn btn-primary" @click="onUpdate()" :disabled="!isFormValid">Update</button>
                   <router-link to="/doctors" class="btn btn-secondary">Cancel</router-link>
                 </div>
 
@@ -128,6 +138,7 @@ export default {
         name: '',
         dob: '',
         email: '',
+        nic: '',
         phone: '',
         speciality_id: -1,
       },
@@ -149,13 +160,35 @@ export default {
       return this.$store.getters[ 'doctors/getDoctorsSpecialities' ];
     },
 
-    validated() {
-      return !(
-          this.doctor.name === '' ||
-          this.doctor.email === '' ||
-          this.doctor.speciality_id === -1 ||
-          this.doctor.phone.length !== 10
-      );
+     isValidNic() {
+
+      if ( this.doctor.nic === '' ) {
+				return true;
+			} else {
+				const oldPattern = /^[0-9]{9}[V]$/;
+        const newPattern = /^[0-9]{12}$/;
+
+      if (oldPattern.test(this.doctor.nic)) {
+        return true;
+      } else if (newPattern.test(this.doctor.nic)) {
+        return true;
+      }
+      return false;
+			}
+      
+    },
+
+    isPhoneValid() {
+       if ( this.doctor.phone === '' ) {
+				return true;
+			} else {  
+			const pattern = /^[0-9]{3}-[0-9]{7}$/;
+      return pattern.test(this.doctor.phone);
+      }
+    },
+
+    isFormValid() {
+      return this.isValidNic && !_.isEmpty(this.doctor.name) && !_.isEmpty(this.doctor.email) && this.isPhoneValid && this.doctor.speciality_id !== -1;
     },
 
     associatedUser() {
@@ -206,6 +239,7 @@ export default {
           name: this.doctor.name,
           email: this.doctor.email,
           dob: this.doctor.dob,
+          nic: this.doctor.nic,
           phone: this.doctor.phone,
           speciality_id: this.doctor.speciality_id,
           user_id: this.associatedUserId,

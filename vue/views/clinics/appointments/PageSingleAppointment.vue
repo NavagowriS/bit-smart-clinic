@@ -23,7 +23,7 @@
 
                 <div class="d-flex flex-column">
                   <h2 class="">{{ patient.full_name }}</h2>
-                  <div class="lead">DoB: {{ patient.dob }} ({{ patient.age }})</div>
+                  <div class="lead">DoB: {{ patient.dob }}</div>
                   <div class="">Gender: {{ patient.gender }}</div>
                 </div>
 

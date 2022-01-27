@@ -10,7 +10,7 @@ require_once "../../../bootstrap.php";
 
 try {
 
-    Auth::authenticate();
+//    Auth::authenticate();
 
     $id = Request::getAsInteger("id", true);
 

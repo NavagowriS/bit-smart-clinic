@@ -54,7 +54,7 @@
 
 
           <div class="text-center">
-            <button class="btn btn-primary" @click="onUpdate()">Save</button>
+            <button class="btn btn-primary" @click="onUpdate()" :disabled="editDrug.drug_name === ''">Save</button>
           </div>
 
         </div><!-- drug form -->

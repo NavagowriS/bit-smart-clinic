@@ -14,7 +14,7 @@ class Doctor implements IModel
     private const TABLE = 'doctors';
 
     public ?int $id, $speciality_id, $user_id;
-    public ?string $name, $email, $phone, $dob;
+    public ?string $name, $email, $nic, $phone, $dob;
 
     public ?DoctorSpeciality $doctor_speciality;
     public ?User $user;
@@ -92,6 +92,7 @@ class Doctor implements IModel
         $data = [
             'name' => $this->name,
             'email' => $this->email,
+            'nic' => $this->nic,
             'phone' => $this->phone,
             'dob' => $this->dob,
             'speciality_id' => $this->speciality_id,
@@ -105,6 +106,7 @@ class Doctor implements IModel
         $data = [
             'name' => $this->name,
             'email' => $this->email,
+            'nic' => $this->nic,
             'phone' => $this->phone,
             'dob' => $this->dob,
             'speciality_id' => $this->speciality_id,

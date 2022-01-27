@@ -23,11 +23,11 @@ class ClinicAppointment implements IModel
      * @param $array
      * @return static
      */
-    public static function build( $array ): self
+    public static function build($array): self
     {
 
         $object = new self();
-        foreach ( $array as $key => $value ) {
+        foreach ($array as $key => $value) {
             $object->$key = $value;
         }
         return $object;
@@ -38,14 +38,14 @@ class ClinicAppointment implements IModel
      * @param int $id
      * @return ClinicAppointment|null
      */
-    public static function find( int $id ): ?ClinicAppointment
+    public static function find(int $id): ?ClinicAppointment
     {
         /** @var self $result */
-        $result = Database::find( self::TABLE, $id, self::class );
+        $result = Database::find(self::TABLE, $id, self::class);
 
-        if ( !empty( $result ) ) {
-            $result->clinic_patient = ClinicPatient::find( $result->clinic_patient_id );
-            $result->clinic = Clinic::find( $result->clinic_id );
+        if (!empty($result)) {
+            $result->clinic_patient = ClinicPatient::find($result->clinic_patient_id);
+            $result->clinic = Clinic::find($result->clinic_id);
             return $result;
         }
 
@@ -58,7 +58,7 @@ class ClinicAppointment implements IModel
      * @param int $limit
      * @param int $offset
      */
-    public static function findAll( $limit = 1000, $offset = 0 )
+    public static function findAll($limit = 1000, $offset = 0)
     {
         // TODO: Implement findAll() method.
     }
@@ -76,7 +76,7 @@ class ClinicAppointment implements IModel
             'clinic_date' => $this->clinic_date,
         ];
 
-        return Database::insert( self::TABLE, $data );
+        return Database::insert(self::TABLE, $data);
     }
 
 
@@ -95,7 +95,7 @@ class ClinicAppointment implements IModel
             'doctor_remarks' => $this->doctor_remarks,
         ];
 
-        return Database::update( self::TABLE, $data, [ 'id' => $this->id ] );
+        return Database::update(self::TABLE, $data, ['id' => $this->id]);
     }
 
 
@@ -109,7 +109,7 @@ class ClinicAppointment implements IModel
         $data = [
             'status' => $this->status,
         ];
-        return Database::update( self::TABLE, $data, [ 'id' => $this->id ] );
+        return Database::update(self::TABLE, $data, ['id' => $this->id]);
     }
 
 
@@ -118,7 +118,7 @@ class ClinicAppointment implements IModel
      */
     public function delete(): bool
     {
-        return Database::delete( self::TABLE, 'id', $this->id );
+        return Database::delete(self::TABLE, 'id', $this->id);
     }
 
 
@@ -128,18 +128,18 @@ class ClinicAppointment implements IModel
      * @param $clinicDate
      * @return ClinicAppointment[]|array
      */
-    public static function getAppointmentsForDay( $clinicId, $clinicDate ): array
+    public static function getAppointmentsForDay($clinicId, $clinicDate): array
     {
 
         $db = Database::instance();
-        $statement = $db->prepare( 'select * from clinic_appointments where clinic_id = ? and clinic_date = ? order by token_number' );
+        $statement = $db->prepare('select * from clinic_appointments where clinic_id = ? and clinic_date = ? order by token_number');
 
-        $statement->execute( [ $clinicId, $clinicDate ] );
+        $statement->execute([$clinicId, $clinicDate]);
 
         /** @var self[] $results */
-        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+        $results = $statement->fetchAll(PDO::FETCH_CLASS, self::class);
 
-        if ( !empty( $results ) ) return $results;
+        if (!empty($results)) return $results;
 
         return [];
 
@@ -150,16 +150,16 @@ class ClinicAppointment implements IModel
      * @param $clinicPatientId
      * @return array
      */
-    public static function getByClinicPatient( $clinicPatientId ): array
+    public static function getByClinicPatient($clinicPatientId): array
     {
         $db = Database::instance();
-        $statement = $db->prepare( 'select * from clinic_appointments where clinic_patient_id=? order by clinic_date desc' );
+        $statement = $db->prepare('select * from clinic_appointments where clinic_patient_id=? order by clinic_date desc');
 
-        $statement->execute( [ $clinicPatientId ] );
+        $statement->execute([$clinicPatientId]);
 
-        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+        $results = $statement->fetchAll(PDO::FETCH_CLASS, self::class);
 
-        if ( !empty( $results ) ) return $results;
+        if (!empty($results)) return $results;
 
         return [];
 
@@ -170,22 +170,22 @@ class ClinicAppointment implements IModel
      * @param Clinic $clinic
      * @return array
      */
-    public static function getByClinic( Clinic $clinic ): array
+    public static function getByClinic(Clinic $clinic): array
     {
         $db = Database::instance();
-        $statement = $db->prepare( "select * from clinic_appointments where clinic_id = ? order by clinic_date desc" );
-        $statement->execute( [ $clinic->id ] );
+        $statement = $db->prepare("select * from clinic_appointments where clinic_id = ? order by clinic_date desc");
+        $statement->execute([$clinic->id]);
 
         /** @var self[] $results */
-        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+        $results = $statement->fetchAll(PDO::FETCH_CLASS, self::class);
 
         $output = [
             "clinic" => $clinic,
             "appointments" => [],
         ];
 
-        if ( !empty( $results ) ) {
-            $output[ "appointments" ] = $results;
+        if (!empty($results)) {
+            $output["appointments"] = $results;
         }
         return $output;
     }
@@ -197,30 +197,30 @@ class ClinicAppointment implements IModel
      * @param string $endDate
      * @return array
      */
-    public static function getByClinicBetweenDates( Clinic $clinic, string $startDate, string $endDate, string $status ): array
+    public static function getByClinicBetweenDates(Clinic $clinic, string $startDate, string $endDate, string $status): array
     {
 
         $db = Database::instance();
 
-        if ( $status === 'ALL' ) {
-            $statement = $db->prepare( "select * from clinic_appointments where clinic_id = ? and (clinic_date between ? and ?) order by clinic_date desc" );
-            $statement->execute( [ $clinic->id, $startDate, $endDate ] );
+        if ($status === 'ALL') {
+            $statement = $db->prepare("select * from clinic_appointments where clinic_id = ? and (clinic_date between ? and ?) order by clinic_date desc");
+            $statement->execute([$clinic->id, $startDate, $endDate]);
 
         } else {
 
-            $statement = $db->prepare( "select * from clinic_appointments where clinic_id = ? and (clinic_date between ? and ?) and status = ? order by clinic_date desc" );
-            $statement->execute( [ $clinic->id, $startDate, $endDate, $status ] );
+            $statement = $db->prepare("select * from clinic_appointments where clinic_id = ? and (clinic_date between ? and ?) and status = ? order by clinic_date desc");
+            $statement->execute([$clinic->id, $startDate, $endDate, $status]);
         }
 
 
         /** @var self[] $results */
-        $results = $statement->fetchAll( PDO::FETCH_CLASS, self::class );
+        $results = $statement->fetchAll(PDO::FETCH_CLASS, self::class);
 
 
-        if ( !empty( $results ) ) {
-            foreach ( $results as $result ) {
+        if (!empty($results)) {
+            foreach ($results as $result) {
 
-                $result->clinic_patient = ClinicPatient::find( $result->clinic_patient_id );
+                $result->clinic_patient = ClinicPatient::find($result->clinic_patient_id);
 
             }
         }
@@ -230,28 +230,48 @@ class ClinicAppointment implements IModel
             "appointments" => [],
         ];
 
-        if ( !empty( $results ) ) {
-            $output[ "appointments" ] = $results;
+        if (!empty($results)) {
+            $output["appointments"] = $results;
         }
         return $output;
     }
 
 
-    public static function checkExist($clinic_id, $clinic_patient_id, $clinic_date): bool
+    public static function checkExist($clinic_id, $clinic_patient_id, $clinic_date): ?self
     {
 
         $db = Database::instance();
-        $statement = $db->prepare( 'select * from clinic_appointments where clinic_id=? and clinic_patient_id=? and clinic_date=? limit 1');
+        $statement = $db->prepare('select * from clinic_appointments where clinic_id=? and clinic_patient_id=? and clinic_date=? limit 1');
         $statement->execute([
             $clinic_id, $clinic_patient_id, $clinic_date
         ]);
 
 
+        /** @var self $result */
         $result = $statement->fetchObject(self::class);
 
-        if(!empty( $result)) return true;
-        return  false;
+        if (!empty($result)) return $result;
+        return null;
 
+    }
+
+    public static function getAllTokensForTheDay($clinic_id, $clinic_date): array
+    {
+        $db = Database::instance();
+        $statement = $db->prepare('select * from clinic_appointments where clinic_id=? and clinic_date=?');
+        $statement->execute([$clinic_id, $clinic_date]);
+
+        /** @var self[] $results */
+        $results = $statement->fetchAll(PDO::FETCH_CLASS, self::class);
+
+        if (!empty($results)) {
+            $output = [];
+            foreach ($results as $result) {
+                $output[] = $result->token_number;
+            }
+            return $output;
+        }
+        return [];
     }
 
 

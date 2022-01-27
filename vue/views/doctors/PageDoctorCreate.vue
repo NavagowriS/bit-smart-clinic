@@ -19,7 +19,8 @@
 
                 <div class="mb-3">
                   <label class="form-label">Doctor name*</label>
-                  <input type="text" class="form-control" v-model.trim="formCreateDoctor.name">
+                  <input type="text" class="form-control" :class="{'is-invalid': formCreateDoctor.name === ''}" v-model.trim="formCreateDoctor.name">
+                  <div class="invalid-feedback">Doctor name cannot be empty</div>
                 </div>
 
                 <div class="mb-3">
@@ -29,16 +30,26 @@
 
                 <div class="mb-3">
                   <label class="form-label">Email*</label>
-                  <input type="email" class="form-control" v-model.trim="formCreateDoctor.email">
+                  <input type="text" class="form-control" :class="{'is-invalid': formCreateDoctor.email === ''}" v-model.trim="formCreateDoctor.email">
+                  <div class="invalid-feedback">Doctor Email cannot be empty</div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">NIC</label>
+                  <input type="text" class="form-control" :class="{'is-invalid': !isValidNic}" v-model="formCreateDoctor.nic">
+                  <div class="invalid-feedback">Invalid (Use 9 digits + V or 12 digits)</div>
                 </div>
 
                 <div class="mb-3">
                   <label class="form-label">Phone</label>
-                  <input type="text" class="form-control" v-model="formCreateDoctor.phone">
+                  <input type="text" class="form-control" :class="{'is-invalid': !isPhoneValid}"
+                             placeholder="Eg. 077-4562874" v-model="formCreateDoctor.phone">
+                      <div class="invalid-feedback">Invalid. (Use XXX-XXXXXXX)</div>
                 </div>
 
+
                 <div class="mb-3">
-                  <label class="form-label">Speciality*</label>
+                  <label class="form-label">Speciality* (Selecting a Speciality is must)</label> 
                   <select class="form-select" v-model.number="formCreateDoctor.speciality_id">
                     <option value="-1" disabled>SELECT ONE</option>
                     <option v-for="speciality in allSpecialities" :value="speciality.id" :key="speciality.id">
@@ -48,7 +59,7 @@
                 </div>
 
                 <div class="text-end">
-                  <button class="btn btn-primary" @click="onSave()" :disabled="!validated">Save</button>
+                  <button class="btn btn-primary" @click="onSave()" :disabled="!isFormValid">Save</button>
                   <router-link to="/doctors" class="btn btn-secondary">Cancel</router-link>
                 </div>
 
@@ -77,6 +88,7 @@ import DateRangeField from '@/components/fields/DateRangeField';
 import TopNavigationBar from '@/components/TopNavigationBar';
 import moment from 'moment';
 
+const _ = require('lodash');
 
 export default {
   name: 'PageDoctorCreate',
@@ -89,6 +101,7 @@ export default {
         name: '',
         dob: moment().format( 'YYYY-MM-DD' ),
         email: '',
+        nic: '',
         phone: '',
         speciality_id: -1,
       },
@@ -104,14 +117,37 @@ export default {
       return this.$store.getters['doctors/getDoctorsSpecialities'];
     },
 
-    validated() {
+    isValidNic() {
 
-      return (
-          this.formCreateDoctor.name !== '' ||
-          this.formCreateDoctor.email !== '' ||
-          this.formCreateDoctor.speciality_id !== -1
-      );
+      if ( this.formCreateDoctor.nic === '' ) {
+				return true;
+			} else {
+				const oldPattern = /^[0-9]{9}[V]$/;
+        const newPattern = /^[0-9]{12}$/;
+
+      if (oldPattern.test(this.formCreateDoctor.nic)) {
+        return true;
+      } else if (newPattern.test(this.formCreateDoctor.nic)) {
+        return true;
+      }
+      return false;
+			}
+      
     },
+
+    isPhoneValid() {
+       if ( this.formCreateDoctor.phone === '' ) {
+				return true;
+			} else {  
+			const pattern = /^[0-9]{3}-[0-9]{7}$/;
+      return pattern.test(this.formCreateDoctor.phone);
+      }
+    },
+
+    isFormValid() {
+      return this.isValidNic && !_.isEmpty(this.formCreateDoctor.name) && !_.isEmpty(this.formCreateDoctor.email) 
+      && this.isPhoneValid && this.formCreateDoctor.speciality_id !== -1;
+    }
 
   },
 
@@ -137,6 +173,7 @@ export default {
           name: this.formCreateDoctor.name,
           email: this.formCreateDoctor.email,
           dob: this.formCreateDoctor.dob,
+          nic: this.formCreateDoctor.nic,
           phone: this.formCreateDoctor.phone,
           speciality_id: this.formCreateDoctor.speciality_id,
         };

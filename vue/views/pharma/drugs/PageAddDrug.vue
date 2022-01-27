@@ -46,7 +46,7 @@
 
 
         <div class="text-center">
-          <button class="btn btn-primary" @click="onSave()">Save</button>
+          <button class="btn btn-primary" @click="onSave()" :disabled="formSaveDrug.drug_name === ''">Save</button>
         </div>
 
       </div>

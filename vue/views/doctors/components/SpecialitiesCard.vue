@@ -32,11 +32,11 @@
 
       <div class="mb-3">
         <label class="form-label">Speciality</label>
-        <input type="text" class="form-control" v-model="specialityToEdit.speciality">
+        <input type="text" class="form-control" v-model.trim="specialityToEdit.speciality">
       </div>
 
       <div class="text-center">
-        <button class="btn btn-success" @click="onUpdate()">Update</button>
+        <button class="btn btn-success" @click="onUpdate()" :disabled="specialityToEdit.speciality === ''">Update</button>
       </div>
 
     </ModalWindow>
@@ -50,7 +50,7 @@
       </div>
 
       <div class="text-center">
-        <button class="btn btn-success" @click="onCreate()">Create</button>
+        <button class="btn btn-success" @click="onCreate()" :disabled="specialityToAdd.speciality === ''">Create</button>
       </div>
     </ModalWindow>
 
@@ -64,9 +64,11 @@ import CardSection from '@/components/CardSection.vue';
 import ModalWindow from '@/components/ModalWindow.vue';
 import {showErrorDialog} from '@/helpers/common.js';
 
+const _ = require('lodash');
+
 export default {
   name: 'SpecialitiesCard',
-  components: { ModalWindow, CardSection },
+  components: {ModalWindow, CardSection},
 
 
   data() {
@@ -88,7 +90,7 @@ export default {
 
     /** @returns {DoctorSpeciality[]} */
     allSpecialities() {
-      return this.$store.getters[ 'specialities/getAllSpecialities' ];
+      return this.$store.getters['specialities/getAllSpecialities'];
     },
 
   },
@@ -99,8 +101,8 @@ export default {
 
       await this._fetchAll();
 
-    } catch ( e ) {
-      showErrorDialog( e.response, 'Failed to fetch speciality details' );
+    } catch (e) {
+      showErrorDialog(e.response, 'Failed to fetch speciality details');
     }
 
   },
@@ -110,9 +112,9 @@ export default {
     /**
      * @param item {DoctorSpeciality}
      */
-    openEditModal( item ) {
+    openEditModal(item) {
 
-      this.specialityToEdit = item;
+      this.specialityToEdit = _.cloneDeep(item);
 
       this.$refs.modal_edit_speciality.show();
 
@@ -126,16 +128,16 @@ export default {
           speciality: this.specialityToEdit.speciality,
         };
 
-        await this.$store.dispatch( 'specialities/update', params );
+        await this.$store.dispatch('specialities/update', params);
 
         this.$refs.modal_edit_speciality.close();
 
         await this._fetchAll();
 
-        await this.$store.dispatch( 'doctors/fetchAll' );
+        await this.$store.dispatch('doctors/fetchAll');
 
-      } catch ( e ) {
-        showErrorDialog( e.response, 'Failed to update' );
+      } catch (e) {
+        showErrorDialog(e.response, 'Failed to update');
       }
     }, /* onUpdate */
 
@@ -147,14 +149,14 @@ export default {
           speciality: this.specialityToAdd.speciality,
         };
 
-        await this.$store.dispatch( 'specialities/create', params );
+        await this.$store.dispatch('specialities/create', params);
 
         this.$refs.modal_create_speciality.close();
 
         await this._fetchAll();
 
-      } catch ( e ) {
-        showErrorDialog( e.response, 'Failed to create' );
+      } catch (e) {
+        showErrorDialog(e.response, 'Failed to create');
       }
 
     }, /* onCreate */
@@ -162,9 +164,9 @@ export default {
 
     async _fetchAll() {
       try {
-        await this.$store.dispatch( 'specialities/fetchAll' );
-      } catch ( e ) {
-        showErrorDialog( e.response );
+        await this.$store.dispatch('specialities/fetchAll');
+      } catch (e) {
+        showErrorDialog(e.response);
       }
     },
 
